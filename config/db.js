@@ -11,7 +11,7 @@ export const sequelize = new Sequelize(
         logging: false, // Puedes poner console.log para ver las queries que genera
         define: {
             underscored: true, // Convierte camelCase a snake_case automáticamente
-            paranoid: true,    // Habilita soft delete usando 'deleted_at'
+            paranoid: false,   // Por defecto desactivado; se activa solo en modelos con 'deleted_at'
         }
     }
 );

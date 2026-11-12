@@ -1,27 +1,30 @@
 import { DataTypes, Model } from "sequelize";
-import { sequelize } from "../config/db";
+import { sequelize } from "../config/db.js";
 
 export class Rol extends Model {}
 
-Rol.init({
+Rol.init(
+  {
     id: {
-        type: DataTypes.BIGINT,
-        autoIncrement: true,
-        primaryKey: true
+      type: DataTypes.BIGINT,
+      autoIncrement: true,
+      primaryKey: true,
     },
-    nombreRol: {
-        type: DataTypes.STRING(50),
-        allowNull: false,
-        unique: true
+    nombre: {
+      type: DataTypes.STRING(50),
+      allowNull: false,
+      unique: true,
     },
-    descricionRol : {
-        type: DataTypes.STRING(50),
-        allowNull: true,
-        unique: false
-    }
-},{
+    descripcion: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+    },
+  },
+  {
     sequelize,
-    tableName:'roles',
-    timestamps:true,
-    createdAt:'created_at',
-});
+    tableName: "roles",
+    timestamps: true,
+    createdAt: "created_at",
+    updatedAt: false,
+  }
+);

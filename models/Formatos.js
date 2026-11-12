@@ -1,26 +1,31 @@
 import { DataTypes, Model } from "sequelize";
-import { sequelize } from "../config/db";
+import { sequelize } from "../config/db.js";
 
 export class Formatos extends Model {}
 
-Formatos.init({
-    id:{
-        type:DataTypes.BIGINT,
-        autoIncrement:true,
-        primaryKey:true
+Formatos.init(
+  {
+    id: {
+      type: DataTypes.BIGINT,
+      autoIncrement: true,
+      primaryKey: true,
     },
     codigo: {
-        type:DataTypes.STRING(100),
-        allowNull:false,
-        unique:true,
+      type: DataTypes.STRING(100),
+      allowNull: false,
+      unique: true,
     },
-    nombre:{
-        type:DataTypes.STRING(150),
-        allowNull:false,
-    }
-},{
+    nombre: {
+      type: DataTypes.STRING(150),
+      allowNull: false,
+    },
+  },
+  {
     sequelize,
-    tableName:'formatos',
-    timestamps:true,
-    createdAt:'created_at'
-});
+    tableName: "formatos",
+    timestamps: true,
+    createdAt: "created_at",
+    updatedAt: false,
+    paranoid: false,
+  }
+);

@@ -1,7 +1,7 @@
 import { DataTypes, Model } from "sequelize";
 import { sequelize } from "../config/db.js";
-import { Autor } from "./Autor.js";
-import { Libro } from "./Libro.js";
+import { Autores } from "./Autores.js";
+import { Libros } from "./Libros.js";
 
 export class LibrosAutores extends Model {}
 
@@ -11,7 +11,7 @@ LibrosAutores.init(
       type: DataTypes.BIGINT,
       primaryKey: true,
       references: {
-        model: Libro,
+        model: Libros,
         key: "id",
       },
     },
@@ -19,32 +19,32 @@ LibrosAutores.init(
       type: DataTypes.BIGINT,
       primaryKey: true,
       references: {
-        model: Autor,
+        model: Autores,
         key: "id",
       },
     },
     orden_autoria: {
       type: DataTypes.SMALLINT,
       allowNull: false,
-      defaultValue: 1, // DEFAULT 1 en tu SQL
+      defaultValue: 1,
     },
   },
   {
     sequelize,
     tableName: "libros_autores",
-    timestamps: false, // La tabla pivote no tiene created_at ni updated_at en el SQL
+    timestamps: false,
+    paranoid: false,
   }
 );
 
-// Definición de la relación Muchos a Muchos (N:M)
-Libro.belongsToMany(Autor, {
+Libros.belongsToMany(Autores, {
   through: LibrosAutores,
   foreignKey: "libro_id",
   otherKey: "autor_id",
   as: "autores",
 });
 
-Autor.belongsToMany(Libro, {
+Autores.belongsToMany(Libros, {
   through: LibrosAutores,
   foreignKey: "autor_id",
   otherKey: "libro_id",

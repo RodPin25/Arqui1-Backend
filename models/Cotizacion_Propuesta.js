@@ -1,6 +1,6 @@
 import { DataTypes, Model } from "sequelize";
 import { sequelize } from "../config/db.js";
-import { CotizacionSolicitud } from "./CotizacionSolicitud.js";
+import { CotizacionSolicitud } from "./Cotizacion_Solicitud.js";
 import { Usuario } from "./Usuario.js";
 
 export class CotizacionPropuesta extends Model {}
@@ -70,7 +70,6 @@ CotizacionPropuesta.init(
   }
 );
 
-// Relaciones
 CotizacionSolicitud.hasMany(CotizacionPropuesta, { foreignKey: "solicitud_id", as: "propuestas" });
 CotizacionPropuesta.belongsTo(CotizacionSolicitud, { foreignKey: "solicitud_id", as: "solicitud" });
 
