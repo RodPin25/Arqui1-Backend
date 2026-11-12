@@ -2,7 +2,16 @@ import { DataTypes, Model } from "sequelize";
 import { sequelize } from "../config/db.js";
 import { Usuario } from "./Usuario.js";
 
-export class Orden extends Model {}
+import { Carritos } from "./Carritos.js";
+
+export class Orden extends Model {
+  /**
+   * Cálculo de totales y liquidación de orden mediante la lógica del Modelo
+   */
+  static calcularTotales(params) {
+    return Carritos.calcularTotales(params);
+  }
+}
 
 Orden.init(
   {

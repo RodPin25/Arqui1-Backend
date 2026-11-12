@@ -1,6 +1,6 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { Usuario, Rol, Carritos } from "../models/index.js";
+import { Usuario, Rol, Carritos, PerfilInstitucional } from "../models/index.js";
 
 // Helper para generar tokens JWT
 const generarTokens = (usuario) => {
@@ -25,10 +25,22 @@ const generarTokens = (usuario) => {
 
 /**
  * Registro de un nuevo usuario
+ * Soporta clientes minoristas y clientes institucionales (con perfil corporativo)
  */
 export const registrar = async (req, res) => {
   try {
-    const { email, password, nombres, apellidos, telefono, rol: rolNombre } = req.body;
+    const {
+      email,
+      password,
+      nombres,
+      apellidos,
+      telefono,
+      rol: rolNombre,
+      razon_social,
+      documento_tributario,
+      direccion_fiscal,
+      contacto_cargo,
+    } = req.body;
 
     // Validaciones básicas
     if (!email || !password || !nombres || !apellidos) {
@@ -54,11 +66,12 @@ export const registrar = async (req, res) => {
       });
     }
 
-    // Determinar el rol (por defecto 'CLIENTE')
-    const nombreRolBuscado = (rolNombre || "CLIENTE").toUpperCase();
+    // Determinar el rol (por defecto 'CLIENTE_MINORISTA')
+    let nombreRolBuscado = (rolNombre || "CLIENTE_MINORISTA").toUpperCase();
+    if (nombreRolBuscado === "CLIENTE") nombreRolBuscado = "CLIENTE_MINORISTA";
+
     let rol = await Rol.findOne({ where: { nombre: nombreRolBuscado } });
     if (!rol) {
-      // Si el rol aún no existe, lo creamos
       rol = await Rol.create({
         nombre: nombreRolBuscado,
         descripcion: `Rol ${nombreRolBuscado}`,
@@ -80,17 +93,40 @@ export const registrar = async (req, res) => {
       activo: true,
     });
 
-    // Si es un cliente, crear automáticamente su carrito de compras
-    if (rol.nombre === "CLIENTE") {
+    // Si es cliente institucional, crear su Perfil Institucional
+    if (["CLIENTE_INSTITUCIONAL", "MAYORISTA"].includes(rol.nombre)) {
+      if (!razon_social || !documento_tributario || !direccion_fiscal) {
+        return res.status(400).json({
+          ok: false,
+          mensaje: "Para el registro institucional se requiere razon_social, documento_tributario y direccion_fiscal",
+        });
+      }
+
+      await PerfilInstitucional.create({
+        usuario_id: nuevoUsuario.id,
+        razon_social: razon_social.trim(),
+        documento_tributario: documento_tributario.trim(),
+        direccion_fiscal: direccion_fiscal.trim(),
+        contacto_cargo: contacto_cargo ? contacto_cargo.trim() : "Representante Legal",
+        estado_verificacion: "pendiente",
+      });
+    }
+
+    // Si es cualquier tipo de cliente (minorista o institucional), crear automáticamente su carrito
+    if (["CLIENTE", "CLIENTE_MINORISTA", "CLIENTE_INSTITUCIONAL", "MAYORISTA"].includes(rol.nombre)) {
       await Carritos.findOrCreate({
         where: { usuario_id: nuevoUsuario.id },
         defaults: { usuario_id: nuevoUsuario.id },
       });
     }
 
-    // Traer el usuario con su rol asociado
+    // Traer el usuario con su rol y perfil institucional si aplica
     const usuarioCompleto = await Usuario.findByPk(nuevoUsuario.id, {
-      include: [{ model: Rol, as: "rol", attributes: ["id", "nombre", "descripcion"] }],
+      include: [
+        { model: Rol, as: "rol", attributes: ["id", "nombre", "descripcion"] },
+        { model: PerfilInstitucional, as: "perfil_institucional" },
+      ],
+      attributes: { exclude: ["password_hash"] },
     });
 
     // Generar tokens
@@ -237,7 +273,9 @@ export const obtenerPerfil = async (req, res) => {
       include: [
         { model: Rol, as: "rol", attributes: ["id", "nombre", "descripcion"] },
         { model: Carritos, as: "carrito" },
+        { model: PerfilInstitucional, as: "perfil_institucional" },
       ],
+      attributes: { exclude: ["password_hash"] },
     });
 
     if (!usuario) {
@@ -255,6 +293,155 @@ export const obtenerPerfil = async (req, res) => {
     return res.status(500).json({
       ok: false,
       mensaje: "Error al obtener perfil del usuario",
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Listar todos los usuarios (Exclusivo Administrador)
+ */
+export const listarUsuarios = async (req, res) => {
+  try {
+    const { rol_id, activo } = req.query;
+    const where = {};
+    if (rol_id) where.rol_id = rol_id;
+    if (activo !== undefined) where.activo = activo === "true" || activo === true;
+
+    const usuarios = await Usuario.findAll({
+      where,
+      include: [
+        { model: Rol, as: "rol", attributes: ["id", "nombre", "descripcion"] },
+        { model: PerfilInstitucional, as: "perfil_institucional" },
+      ],
+      attributes: { exclude: ["password_hash"] },
+      order: [["created_at", "DESC"]],
+    });
+
+    return res.status(200).json({
+      ok: true,
+      total: usuarios.length,
+      data: usuarios,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      ok: false,
+      mensaje: "Error al listar usuarios",
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Actualizar rol o estado activo de un usuario (Exclusivo Administrador)
+ */
+export const actualizarUsuario = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { rol_id, activo, nombres, apellidos, telefono } = req.body;
+
+    const usuario = await Usuario.findByPk(id);
+    if (!usuario) {
+      return res.status(404).json({ ok: false, mensaje: "Usuario no encontrado" });
+    }
+
+    if (rol_id) usuario.rol_id = rol_id;
+    if (activo !== undefined) usuario.activo = Boolean(activo);
+    if (nombres) usuario.nombres = nombres.trim();
+    if (apellidos) usuario.apellidos = apellidos.trim();
+    if (telefono !== undefined) usuario.telefono = telefono;
+
+    await usuario.save();
+
+    const actualizado = await Usuario.findByPk(id, {
+      include: [
+        { model: Rol, as: "rol", attributes: ["id", "nombre", "descripcion"] },
+        { model: PerfilInstitucional, as: "perfil_institucional" },
+      ],
+      attributes: { exclude: ["password_hash"] },
+    });
+
+    return res.status(200).json({
+      ok: true,
+      mensaje: "Usuario actualizado correctamente",
+      data: actualizado,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      ok: false,
+      mensaje: "Error al actualizar usuario",
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Listar perfiles institucionales para revisión (Admin / Asesor)
+ */
+export const listarPerfilesInstitucionales = async (req, res) => {
+  try {
+    const { estado } = req.query;
+    const where = {};
+    if (estado) where.estado_verificacion = estado;
+
+    const perfiles = await PerfilInstitucional.findAll({
+      where,
+      include: [
+        {
+          model: Usuario,
+          as: "usuario",
+          attributes: ["id", "email", "nombres", "apellidos", "telefono", "activo"],
+        },
+      ],
+      order: [["created_at", "DESC"]],
+    });
+
+    return res.status(200).json({
+      ok: true,
+      total: perfiles.length,
+      data: perfiles,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      ok: false,
+      mensaje: "Error al listar perfiles institucionales",
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Verificar o rechazar un perfil institucional (Admin / Asesor)
+ */
+export const verificarPerfilInstitucional = async (req, res) => {
+  try {
+    const { usuario_id } = req.params;
+    const { estado_verificacion } = req.body;
+
+    if (!["verificado", "rechazado", "pendiente"].includes(estado_verificacion)) {
+      return res.status(400).json({
+        ok: false,
+        mensaje: "El estado de verificación debe ser: verificado, rechazado o pendiente",
+      });
+    }
+
+    const perfil = await PerfilInstitucional.findByPk(usuario_id);
+    if (!perfil) {
+      return res.status(404).json({ ok: false, mensaje: "Perfil institucional no encontrado" });
+    }
+
+    perfil.estado_verificacion = estado_verificacion;
+    await perfil.save();
+
+    return res.status(200).json({
+      ok: true,
+      mensaje: `Perfil institucional marcado como ${estado_verificacion}`,
+      data: perfil,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      ok: false,
+      mensaje: "Error al verificar perfil institucional",
       error: error.message,
     });
   }

@@ -1,13 +1,26 @@
 import express from "express";
 import cors from "cors";
+import path from "path";
+import { fileURLToPath } from "url";
 import { sequelize } from "./config/db.js";
 import authRoutes from "./routes/auth.routes.js";
+import catalogoRoutes from "./routes/catalogo.routes.js";
+import carritoRoutes from "./routes/carrito.routes.js";
+import ordenRoutes from "./routes/orden.routes.js";
+import cotizacionRoutes from "./routes/cotizacion.routes.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 
 // Middlewares básicos
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Servir la capa de Vista (View) estática y responsiva de la plataforma MVC
+app.use(express.static(path.join(__dirname, "public")));
 
 // Endpoint de prueba de salud y conexión a PostgreSQL
 app.get("/api/health", async (req, res) => {
@@ -27,7 +40,11 @@ app.get("/api/health", async (req, res) => {
   }
 });
 
-// Rutas de autenticación
+// Rutas API principales del Controlador
 app.use("/api/auth", authRoutes);
+app.use("/api/catalogo", catalogoRoutes);
+app.use("/api/carrito", carritoRoutes);
+app.use("/api/ordenes", ordenRoutes);
+app.use("/api/cotizaciones", cotizacionRoutes);
 
 export default app;
