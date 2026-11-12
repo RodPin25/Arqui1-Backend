@@ -3,4 +3,5 @@
 
 # Paquetes instalados
 .package-lock.json
+node_modules/
 
