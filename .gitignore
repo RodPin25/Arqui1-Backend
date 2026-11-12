@@ -1,0 +1,6 @@
+# Variables de entorno
+.env
+
+# Paquetes instalados
+.package-lock.json
+
