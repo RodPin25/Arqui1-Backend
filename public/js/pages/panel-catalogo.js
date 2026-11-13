@@ -246,7 +246,12 @@ function nuevoProducto() {
   const texto = boton.textContent;
          ocupado(boton, async () => {
            try {
-             // Primero se sube la portada a Cloudinary y su URL se guarda con el libro nuevo.
+             // Si el autor es nuevo, se registra antes de crear el libro.
+             if (modo === "nuevo") {
+               boton.textContent = "Guardando autor…";
+               cuerpoApi.libroNuevo.autores_ids = [await autor.resolver()];
+             }
+             // Primero se sube la portada a Cloudinary y su URL se guarda con el libro nuevo
              if (modo === "nuevo" && selector.archivo()) {
                boton.textContent = "Subiendo portada…";
                const subida = await catalogoApi.subirPortada(selector.archivo()).catch((err) => { throw errorDePortada(err); });
@@ -282,11 +287,6 @@ function nuevoRegistro(tipo) {
       e.preventDefault();
       if (!validarFormulario(e.currentTarget)) return;
       ocupado(boton, async () => {
-             // Si el autor es nuevo, se registra antes de crear el libro.
-        if (modo === "nuevo") {
-          boton.textContent = "Guardando autor…";
-          cuerpoApi.libroNuevo.autores_ids = [await autor.resolver()];
-        }
         try {
           await config.crear(Object.fromEntries(Object.entries(controles).map(([k, c]) => [k, c.value.trim() || null])));
           toast(config.aviso);
