@@ -23,12 +23,29 @@ async function main() {
     initSocketServer(httpServer);
     console.log("Servidor WebSocket (Socket.IO) inicializado correctamente.");
 
-    httpServer.listen(PORT, () => {
-      console.log(`Servidor HTTP + WebSockets corriendo en http://localhost:${PORT}`);
-      console.log(`Prueba de salud: http://localhost:${PORT}/api/health`);
-      console.log(`Auth endpoints: http://localhost:${PORT}/api/auth/login`);
-      console.log(`Reportería en vivo: http://localhost:${PORT}/api/reportes/dashboard`);
+    let puertoActual = parseInt(PORT, 10) || 3000;
+
+    const iniciarEscucha = (puerto) => {
+      httpServer.listen(puerto, () => {
+        console.log(`🚀 Servidor HTTP + WebSockets corriendo en http://localhost:${puerto}`);
+        console.log(`Prueba de salud: http://localhost:${puerto}/api/health`);
+        console.log(`Auth endpoints: http://localhost:${puerto}/api/auth/login`);
+        console.log(`Reportería en vivo: http://localhost:${puerto}/api/reportes/dashboard`);
+      });
+    };
+
+    httpServer.on("error", (err) => {
+      if (err.code === "EADDRINUSE") {
+        console.warn(`⚠️ Puerto ${puertoActual} ocupado. Reintentando automáticamente en el puerto ${puertoActual + 1}...`);
+        puertoActual += 1;
+        iniciarEscucha(puertoActual);
+      } else {
+        console.error("Error al iniciar el servidor HTTP:", err.message);
+        process.exit(1);
+      }
     });
+
+    iniciarEscucha(puertoActual);
   } catch (error) {
     console.error("No se pudo conectar a la base de datos:", error.message);
     process.exit(1);

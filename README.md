@@ -276,3 +276,29 @@ Para evitar duplicidad en transacciones y garantizar una experiencia de compra c
 - `PATCH /api/cotizaciones/solicitudes/:id/asignar` *(Asesor)* : Asignarse la solicitud comercial.
 - `POST /api/cotizaciones/solicitudes/:id/propuesta` *(Asesor)* : Emisión de propuesta formal digital con costos y días de entrega.
 - `POST /api/cotizaciones/solicitudes/:id/responder` *(Institucional)* : Aprobación o rechazo de la propuesta por parte del cliente.
+
+### Reportería y Métricas Comerciales (`/api/reportes`)
+- `GET /api/reportes/dashboard` *(Admin/Asesor)* : Dashboard integral de métricas en tiempo real (ingresos brutos, desglose de descuentos, impuestos IVA, total facturado neto, distribución de órdenes por estado, métricas de cotizaciones B2B, alertas de stock crítico y últimas órdenes).
+
+---
+
+## 8. Arquitectura y Eventos WebSockets en Tiempo Real (Socket.IO)
+
+El servidor cuenta con un motor de eventos bidireccional en tiempo real para sincronizar tanto el estado del checkout como las métricas administrativas sin necesidad de sondeo (polling).
+
+### Canales y Salas (Rooms)
+1. **Sala de Checkout:** `checkout:${usuarioId}`  
+   Se conecta el cliente al iniciar el proceso de compra.
+2. **Sala de Reportería:** `reporteria`  
+   Se conectan los paneles administrativos y comerciales de Asesores y Administradores.
+
+### Eventos Emitidos por el Servidor
+| Evento | Sala | Payload / Descripción |
+|---|---|---|
+| `checkout:tick` | `checkout:${id}` | `{ tiempo_restante_segundos, expira_en }` emitido cada segundo durante los 10 minutos. |
+| `checkout:expirado` | `checkout:${id}` | `{ expiro: true, redirigir_tienda: true, ruta_redireccion: "/tienda" }` emitido al agotarse los 10 min. |
+| `checkout:completado`| `checkout:${id}` | `{ completado: true, orden }` emitido tras confirmación exitosa de compra. |
+| `checkout:cancelado` | `checkout:${id}` | `{ cancelado: true, redirigir_tienda: true }` emitido si el usuario cancela la sesión. |
+| `reporte:actualizado`| `reporteria` | `{ data: metricas }` emitido en tiempo real ante cualquier nueva orden o cambio de estado. |
+| `reporte:nueva_venta` | `reporteria` | `{ venta: { numero_orden, total_final, fecha } }` emitido al registrar una nueva transacción. |
+
