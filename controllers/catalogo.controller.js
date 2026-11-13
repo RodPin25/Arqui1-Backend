@@ -552,6 +552,48 @@ export const crearLibro = async (req, res) => {
   }
 };
 
+export const actualizarLibro = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { titulo, sinopsis, anio_edicion, portada_url, activo } = req.body;
+
+    const libro = await Libros.findByPk(id);
+    if (!libro) return res.status(404).json({ ok: false, mensaje: "Libro no encontrado" });
+
+    if (titulo !== undefined) libro.titulo = titulo.trim();
+    if (sinopsis !== undefined) libro.sinopsis = sinopsis.trim();
+    if (anio_edicion !== undefined) libro.anio_edicion = anio_edicion;
+    if (portada_url !== undefined) libro.portada_url = portada_url;
+    if (activo !== undefined) libro.activo = activo;
+
+    await libro.save();
+    return res.status(200).json({ ok: true, mensaje: "Libro actualizado", data: libro });
+  } catch (error) {
+    return res.status(500).json({ ok: false, error: error.message });
+  }
+};
+
+export const actualizarStock = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { stock_disponible } = req.body;
+
+    if (stock_disponible === undefined || isNaN(parseInt(stock_disponible, 10))) {
+      return res.status(400).json({ ok: false, mensaje: "stock_disponible debe ser un número entero" });
+    }
+
+    const producto = await Catalogo_Productos.findByPk(id);
+    if (!producto) return res.status(404).json({ ok: false, mensaje: "Producto no encontrado" });
+
+    producto.stock_disponible = parseInt(stock_disponible, 10);
+    await producto.save();
+
+    return res.status(200).json({ ok: true, mensaje: "Stock actualizado", data: producto });
+  } catch (error) {
+    return res.status(500).json({ ok: false, error: error.message });
+  }
+};
+
 export const crearAutor = async (req, res) => {
   try {
     const { nombres, apellidos, biografia } = req.body;

@@ -8,6 +8,7 @@ import catalogoRoutes from "./routes/catalogo.routes.js";
 import carritoRoutes from "./routes/carrito.routes.js";
 import ordenRoutes from "./routes/orden.routes.js";
 import cotizacionRoutes from "./routes/cotizacion.routes.js";
+import reportesRoutes from "./routes/reportes.routes.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -46,5 +47,6 @@ app.use("/api/catalogo", catalogoRoutes);
 app.use("/api/carrito", carritoRoutes);
 app.use("/api/ordenes", ordenRoutes);
 app.use("/api/cotizaciones", cotizacionRoutes);
+app.use("/api/reportes", reportesRoutes);
 
 export default app;

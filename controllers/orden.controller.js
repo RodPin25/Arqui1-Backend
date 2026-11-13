@@ -10,6 +10,29 @@ import {
   Usuario,
   Rol,
 } from "../models/index.js";
+import {
+  generarIdempotencyKey,
+  validarFormatoIdempotencyKey,
+  obtenerRegistroIdempotente,
+  guardarRegistroIdempotente,
+} from "../utils/idempotencia.js";
+import {
+  emitirTickCheckout,
+  emitirExpiracionCheckout,
+  emitirCheckoutCompletado,
+  emitirCheckoutCancelado,
+  emitirNuevaVenta,
+} from "../services/socket.service.js";
+import { refrescarReporteriaEnVivo } from "./reportes.controller.js";
+
+// Duración estricta de la sesión de checkout: 10 minutos (600,000 milisegundos)
+const DURACION_CHECKOUT_MS = 10 * 60 * 1000;
+
+// Almacén en memoria de sesiones de checkout activas por usuario
+const sesionesCheckoutActivas = new Map();
+
+// Almacén de intervalos de emisión en vivo por WebSocket para cada sesión activa
+const temporizadoresCheckout = new Map();
 
 /**
  * Generador de número de orden único legible (ej. ORD-20261112-AB12)
@@ -21,24 +44,354 @@ const generarNumeroOrden = () => {
 };
 
 /**
- * RF-03.3 Cierre de Orden / Checkout a partir del Carrito
+ * RF-03 / REQUERIMIENTO ESPECIAL: Iniciar proceso de Checkout con temporizador de 10 minutos
+ * en tiempo real (vía WebSockets) e Idempotency Key generada a partir de IDEMPOTENCY_KEY.
  */
-export const crearOrden = async (req, res) => {
-  const transaction = await sequelize.transaction();
+export const iniciarCheckout = async (req, res) => {
   try {
     const usuarioId = req.usuario.id;
     const rolNombre = req.usuario.rol;
-    const { direccion_entrega } = req.body;
 
-    if (!direccion_entrega || !direccion_entrega.trim()) {
-      await transaction.rollback();
+    // 1. Obtener carrito del usuario
+    const carrito = await Carritos.findOne({
+      where: { usuario_id: usuarioId },
+      include: [
+        {
+          model: CarritoItem,
+          as: "items",
+          include: [
+            {
+              model: Catalogo_Productos,
+              as: "producto",
+              include: [
+                { model: Formatos, as: "formato", attributes: ["id", "codigo", "nombre"] },
+                { model: Libros, as: "libro", attributes: ["id", "titulo", "portada_url"] },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    if (!carrito || !carrito.items || carrito.items.length === 0) {
       return res.status(400).json({
         ok: false,
-        mensaje: "La dirección de entrega es obligatoria para procesar la orden",
+        mensaje: "El carrito de compras está vacío. Agregue libros antes de pasar al checkout.",
       });
     }
 
-    // 1. Obtener carrito y sus items
+    // 2. Validar stock preliminar de cada ítem
+    for (const item of carrito.items) {
+      if (!item.producto || !item.producto.activo) {
+        return res.status(400).json({
+          ok: false,
+          mensaje: "Un producto en su carrito ya no está disponible en catálogo.",
+        });
+      }
+      if (item.producto.stock_disponible < item.cantidad) {
+        return res.status(400).json({
+          ok: false,
+          mensaje: `Stock insuficiente para '${item.producto.libro?.titulo || item.producto.isbn}'. Disponible: ${item.producto.stock_disponible}, solicitado: ${item.cantidad}`,
+        });
+      }
+    }
+
+    // 3. Calcular desglose con la lógica de negocio en el Modelo
+    const itemsParaCalculo = carrito.items.map((it) => ({
+      cantidad: it.cantidad,
+      precio_unitario: parseFloat(it.producto.precio_base),
+    }));
+
+    const liquidacion = Orden.calcularTotales({
+      items: itemsParaCalculo,
+      rolNombre,
+    });
+
+    // 4. Generar Idempotency Key basada en IDEMPOTENCY_KEY de las variables de entorno
+    const ahora = Date.now();
+    const expiraEn = new Date(ahora + DURACION_CHECKOUT_MS);
+    const idempotencyKey = generarIdempotencyKey(usuarioId, carrito.id, ahora);
+
+    // 5. Registrar sesión de checkout activa con limitador de 10 minutos
+    const sesionCheckout = {
+      usuario_id: usuarioId,
+      carrito_id: carrito.id,
+      idempotency_key: idempotencyKey,
+      iniciado_en: new Date(ahora),
+      expira_en: expiraEn,
+      duracion_ms: DURACION_CHECKOUT_MS,
+      duracion_segundos: DURACION_CHECKOUT_MS / 1000, // 600 segundos
+      estado: "iniciada",
+      liquidacion,
+      items: carrito.items,
+    };
+
+    sesionesCheckoutActivas.set(usuarioId, sesionCheckout);
+
+    // 6. Activar temporizador WebSocket en vivo (Emisión periódica cada segundo)
+    if (temporizadoresCheckout.has(usuarioId)) {
+      clearInterval(temporizadoresCheckout.get(usuarioId));
+      temporizadoresCheckout.delete(usuarioId);
+    }
+
+    const intervalId = setInterval(() => {
+      const sesion = sesionesCheckoutActivas.get(usuarioId);
+      if (!sesion || sesion.estado !== "iniciada") {
+        clearInterval(intervalId);
+        temporizadoresCheckout.delete(usuarioId);
+        return;
+      }
+
+      const diffMs = new Date(sesion.expira_en).getTime() - Date.now();
+      const segundosRestantes = Math.max(0, Math.floor(diffMs / 1000));
+
+      if (segundosRestantes <= 0) {
+        sesion.estado = "expirada";
+        sesionesCheckoutActivas.delete(usuarioId);
+        clearInterval(intervalId);
+        temporizadoresCheckout.delete(usuarioId);
+
+        // Notificar inmediatamente por WebSocket la expiración de los 10 minutos
+        emitirExpiracionCheckout(usuarioId, {
+          mensaje: "El periodo de 10 minutos para confirmar la compra ha expirado. Regresando automáticamente a la tienda...",
+        });
+      } else {
+        // Notificar tick por WebSocket cada segundo
+        emitirTickCheckout(usuarioId, {
+          tiempo_restante_segundos: segundosRestantes,
+          expira_en: sesion.expira_en,
+        });
+      }
+    }, 1000);
+
+    // Evitar que el timer bloquee la salida del proceso Node
+    intervalId.unref?.();
+    temporizadoresCheckout.set(usuarioId, intervalId);
+
+    // Emitir el primer tick de inicio
+    emitirTickCheckout(usuarioId, {
+      tiempo_restante_segundos: 600,
+      expira_en: expiraEn.toISOString(),
+    });
+
+    return res.status(200).json({
+      ok: true,
+      mensaje: "Sesión de checkout iniciada. Tiene 10 minutos para confirmar su compra.",
+      data: {
+        idempotency_key: idempotencyKey,
+        iniciado_en: sesionCheckout.iniciado_en,
+        expira_en: expiraEn.toISOString(),
+        tiempo_limite_segundos: 600,
+        tiempo_restante_segundos: 600,
+        websocket_room: `checkout:${usuarioId}`,
+        liquidacion,
+        items_count: carrito.items.length,
+      },
+    });
+  } catch (error) {
+    console.error("Error al iniciar checkout:", error);
+    return res.status(500).json({
+      ok: false,
+      mensaje: "Error interno al iniciar el checkout",
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Consultar el estado y tiempo restante del checkout (Control de los 10 minutos)
+ */
+export const obtenerEstadoCheckout = async (req, res) => {
+  try {
+    const usuarioId = req.usuario.id;
+    const sesion = sesionesCheckoutActivas.get(usuarioId);
+
+    if (!sesion || sesion.estado !== "iniciada") {
+      return res.status(200).json({
+        ok: false,
+        activa: false,
+        expiro: true,
+        redirigir_tienda: true,
+        ruta_redireccion: "/tienda",
+        mensaje: "No hay una sesión de checkout activa. Regresando a la tienda.",
+      });
+    }
+
+    const ahora = Date.now();
+    const diffMs = new Date(sesion.expira_en).getTime() - ahora;
+    const tiempoRestanteSegundos = Math.max(0, Math.floor(diffMs / 1000));
+
+    // Si transcurrieron los 10 minutos -> EXPIRA AUTOMÁTICAMENTE
+    if (tiempoRestanteSegundos <= 0) {
+      sesion.estado = "expirada";
+      sesionesCheckoutActivas.delete(usuarioId);
+
+      if (temporizadoresCheckout.has(usuarioId)) {
+        clearInterval(temporizadoresCheckout.get(usuarioId));
+        temporizadoresCheckout.delete(usuarioId);
+      }
+
+      emitirExpiracionCheckout(usuarioId, {
+        mensaje: "El tiempo límite de 10 minutos para confirmar la compra ha expirado.",
+      });
+
+      return res.status(200).json({
+        ok: false,
+        activa: false,
+        expiro: true,
+        redirigir_tienda: true,
+        ruta_redireccion: "/tienda",
+        mensaje: "El tiempo límite de 10 minutos para confirmar la compra ha expirado. Redirigiendo a la tienda...",
+      });
+    }
+
+    return res.status(200).json({
+      ok: true,
+      activa: true,
+      expiro: false,
+      tiempo_restante_segundos: tiempoRestanteSegundos,
+      expira_en: sesion.expira_en,
+      idempotency_key: sesion.idempotency_key,
+      liquidacion: sesion.liquidacion,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      ok: false,
+      mensaje: "Error al consultar estado de checkout",
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * Cancelar voluntariamente el checkout y retornar a la tienda
+ */
+export const cancelarCheckout = async (req, res) => {
+  try {
+    const usuarioId = req.usuario.id;
+    sesionesCheckoutActivas.delete(usuarioId);
+
+    if (temporizadoresCheckout.has(usuarioId)) {
+      clearInterval(temporizadoresCheckout.get(usuarioId));
+      temporizadoresCheckout.delete(usuarioId);
+    }
+
+    emitirCheckoutCancelado(usuarioId);
+
+    return res.status(200).json({
+      ok: true,
+      redirigir_tienda: true,
+      ruta_redireccion: "/tienda",
+      mensaje: "Checkout cancelado. Ha regresado a la tienda.",
+    });
+  } catch (error) {
+    return res.status(500).json({
+      ok: false,
+      mensaje: "Error al cancelar checkout",
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * RF-03.3 Cierre y Confirmación de Orden
+ * Con control estricto de Idempotencia y Limitador de Tiempo de 10 minutos
+ */
+export const crearOrden = async (req, res) => {
+  const usuarioId = req.usuario.id;
+  const rolNombre = req.usuario.rol;
+  const { direccion_entrega } = req.body;
+
+  // Extracción de la llave de idempotencia desde cabeceras o cuerpo
+  const idempotencyKey =
+    req.headers["idempotency-key"] ||
+    req.headers["x-idempotency-key"] ||
+    req.body.idempotency_key;
+
+  if (!direccion_entrega || !direccion_entrega.trim()) {
+    return res.status(400).json({
+      ok: false,
+      mensaje: "La dirección de entrega es obligatoria para confirmar la compra",
+    });
+  }
+
+  // =========================================================================
+  // 1. CONTROL DE IDEMPOTENCIA
+  // =========================================================================
+  if (idempotencyKey) {
+    const registroPrevio = obtenerRegistroIdempotente(idempotencyKey);
+    if (registroPrevio && registroPrevio.data) {
+      res.setHeader("X-Idempotency-Replay", "true");
+      return res.status(200).json({
+        ok: true,
+        idempotente: true,
+        mensaje: "Operación idempotente: La orden ya fue confirmada previamente sin duplicar cobros ni stock.",
+        data: registroPrevio.data,
+      });
+    }
+
+    const ordenExistente = await Orden.findOne({
+      where: { idempotency_key: idempotencyKey },
+      include: [
+        {
+          model: OrdenDetalle,
+          as: "detalles",
+          include: [{ model: Catalogo_Productos, as: "producto" }],
+        },
+      ],
+    });
+
+    if (ordenExistente) {
+      res.setHeader("X-Idempotency-Replay", "true");
+      guardarRegistroIdempotente(idempotencyKey, { orden: ordenExistente });
+      return res.status(200).json({
+        ok: true,
+        idempotente: true,
+        mensaje: "Operación idempotente: Orden ya registrada en el sistema.",
+        data: { orden: ordenExistente },
+      });
+    }
+  }
+
+  // =========================================================================
+  // 2. LIMITADOR DE TIEMPO (10 MINUTOS MÁXIMO)
+  // =========================================================================
+  let sesionActiva = sesionesCheckoutActivas.get(usuarioId);
+
+  if (sesionActiva) {
+    const ahora = Date.now();
+    const tiempoExpiracion = new Date(sesionActiva.expira_en).getTime();
+
+    if (ahora > tiempoExpiracion || sesionActiva.estado === "expirada") {
+      sesionActiva.estado = "expirada";
+      sesionesCheckoutActivas.delete(usuarioId);
+
+      if (temporizadoresCheckout.has(usuarioId)) {
+        clearInterval(temporizadoresCheckout.get(usuarioId));
+        temporizadoresCheckout.delete(usuarioId);
+      }
+
+      emitirExpiracionCheckout(usuarioId, {
+        mensaje: "El periodo límite de 10 minutos ha expirado. Regresando a la tienda...",
+      });
+
+      return res.status(410).json({
+        ok: false,
+        expiro: true,
+        redirigir_tienda: true,
+        ruta_redireccion: "/tienda",
+        mensaje: "El periodo límite de 10 minutos para confirmar su compra ha expirado. Ha sido redirigido a la tienda.",
+      });
+    }
+  }
+
+  const finalIdempotencyKey = idempotencyKey || generarIdempotencyKey(usuarioId, "direct", Date.now());
+
+  // =========================================================================
+  // 3. PROCESAMIENTO TRANSACCIONAL SEGURO
+  // =========================================================================
+  const transaction = await sequelize.transaction();
+  try {
     const carrito = await Carritos.findOne({
       where: { usuario_id: usuarioId },
       include: [
@@ -56,11 +409,10 @@ export const crearOrden = async (req, res) => {
       await transaction.rollback();
       return res.status(400).json({
         ok: false,
-        mensaje: "El carrito de compras está vacío. No se puede generar una orden.",
+        mensaje: "El carrito de compras está vacío. No se puede procesar la orden.",
       });
     }
 
-    // 2. Verificar y descontar stock de cada producto
     const itemsParaCalculo = [];
     const detallesParaCrear = [];
 
@@ -82,11 +434,10 @@ export const crearOrden = async (req, res) => {
         await transaction.rollback();
         return res.status(400).json({
           ok: false,
-          mensaje: `Stock insuficiente para el producto '${producto.isbn}'. Disponible: ${producto.stock_disponible}, solicitado: ${item.cantidad}`,
+          mensaje: `Stock insuficiente para '${producto.isbn}'. Disponible: ${producto.stock_disponible}, solicitado: ${item.cantidad}`,
         });
       }
 
-      // Restar stock
       producto.stock_disponible -= item.cantidad;
       await producto.save({ transaction });
 
@@ -106,17 +457,16 @@ export const crearOrden = async (req, res) => {
       });
     }
 
-    // 3. Ejecutar la lógica de negocio y reglas de descuento en el MODELO
     const liquidacion = Orden.calcularTotales({
       items: itemsParaCalculo,
       rolNombre,
     });
 
-    // 4. Crear la orden de compra
     const nuevaOrden = await Orden.create(
       {
         numero_orden: generarNumeroOrden(),
         usuario_id: usuarioId,
+        idempotency_key: finalIdempotencyKey,
         subtotal_base: liquidacion.subtotal_base,
         descuento_volumen: liquidacion.descuento_volumen,
         porcentaje_descuento_volumen: liquidacion.porcentaje_descuento_volumen,
@@ -131,7 +481,6 @@ export const crearOrden = async (req, res) => {
       { transaction }
     );
 
-    // 5. Crear los detalles de la orden
     for (const detalle of detallesParaCrear) {
       await OrdenDetalle.create(
         {
@@ -142,7 +491,6 @@ export const crearOrden = async (req, res) => {
       );
     }
 
-    // 6. Vaciar el carrito del usuario
     await CarritoItem.destroy({
       where: { carrito_id: carrito.id },
       transaction,
@@ -150,7 +498,17 @@ export const crearOrden = async (req, res) => {
 
     await transaction.commit();
 
-    // 7. Retornar la orden completa
+    // Detener el temporizador de WebSocket
+    if (temporizadoresCheckout.has(usuarioId)) {
+      clearInterval(temporizadoresCheckout.get(usuarioId));
+      temporizadoresCheckout.delete(usuarioId);
+    }
+
+    if (sesionActiva) {
+      sesionActiva.estado = "completada";
+      sesionesCheckoutActivas.delete(usuarioId);
+    }
+
     const ordenCompleta = await Orden.findByPk(nuevaOrden.id, {
       include: [
         {
@@ -170,13 +528,32 @@ export const crearOrden = async (req, res) => {
       ],
     });
 
+    const respuestaFinal = {
+      orden: ordenCompleta,
+      desglose_reglas: liquidacion,
+      idempotency_key: finalIdempotencyKey,
+    };
+
+    guardarRegistroIdempotente(finalIdempotencyKey, respuestaFinal);
+
+    // =========================================================================
+    // 4. NOTIFICACIONES EN VIVO POR WEBSOCKET
+    // =========================================================================
+    emitirCheckoutCompletado(usuarioId, ordenCompleta);
+    emitirNuevaVenta({
+      numero_orden: ordenCompleta.numero_orden,
+      total_final: ordenCompleta.total_final,
+      cliente_id: usuarioId,
+      fecha: new Date().toISOString(),
+    });
+
+    // Actualizar reportería en vivo para todos los administradores conectados
+    refrescarReporteriaEnVivo().catch(() => {});
+
     return res.status(201).json({
       ok: true,
-      mensaje: "Orden de compra generada exitosamente",
-      data: {
-        orden: ordenCompleta,
-        desglose_reglas: liquidacion,
-      },
+      mensaje: "Compra confirmada exitosamente dentro del periodo de 10 minutos",
+      data: respuestaFinal,
     });
   } catch (error) {
     await transaction.rollback();
@@ -269,7 +646,6 @@ export const obtenerOrdenPorId = async (req, res) => {
       return res.status(404).json({ ok: false, mensaje: "Orden no encontrada" });
     }
 
-    // Si es cliente, solo puede ver sus propias órdenes
     const esStaff = ["ADMIN", "ADMINISTRADOR", "ASESOR", "ASESOR_VENTAS"].includes(rol);
     if (!esStaff && orden.usuario_id !== usuarioId) {
       return res.status(403).json({ ok: false, mensaje: "No tiene permisos para ver esta orden" });
@@ -290,7 +666,6 @@ export const obtenerOrdenPorId = async (req, res) => {
 
 /**
  * RF-05.2 Monitoreo de órdenes para Administradores y Asesores
- * Filtrado por estado: Pendiente, Aprobado, Enviado, Cancelado
  */
 export const listarTodasLasOrdenes = async (req, res) => {
   try {
@@ -365,6 +740,9 @@ export const actualizarEstadoOrden = async (req, res) => {
 
     orden.estado = estado;
     await orden.save();
+
+    // Actualizar reportería en vivo tras cambio de estado
+    refrescarReporteriaEnVivo().catch(() => {});
 
     return res.status(200).json({
       ok: true,

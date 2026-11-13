@@ -11,6 +11,8 @@ import {
   listarAutores,
   listarEditoriales,
   crearLibro,
+  actualizarLibro,
+  actualizarStock,
   crearAutor,
   crearGenero,
   crearEditorial,
@@ -38,7 +40,9 @@ router.put("/:id", verificarToken, autorizarRoles("ADMIN", "ADMINISTRADOR"), act
 router.delete("/:id", verificarToken, autorizarRoles("ADMIN", "ADMINISTRADOR"), eliminarProducto);
 
 // CRUD de Entidades Base del Catálogo (Admin)
+router.patch("/:id/stock", verificarToken, autorizarRoles("ADMIN", "ADMINISTRADOR"), actualizarStock);
 router.post("/libros", verificarToken, autorizarRoles("ADMIN", "ADMINISTRADOR"), crearLibro);
+router.put("/libros/:id", verificarToken, autorizarRoles("ADMIN", "ADMINISTRADOR"), actualizarLibro);
 router.post("/autores", verificarToken, autorizarRoles("ADMIN", "ADMINISTRADOR"), crearAutor);
 router.post("/generos", verificarToken, autorizarRoles("ADMIN", "ADMINISTRADOR"), crearGenero);
 router.post("/editoriales", verificarToken, autorizarRoles("ADMIN", "ADMINISTRADOR"), crearEditorial);

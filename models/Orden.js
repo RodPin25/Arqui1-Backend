@@ -85,6 +85,11 @@ Orden.init(
       type: DataTypes.TEXT,
       allowNull: false,
     },
+    idempotency_key: {
+      type: DataTypes.STRING(100),
+      allowNull: true,
+      unique: true,
+    },
     fecha_orden: {
       type: DataTypes.DATE,
       defaultValue: DataTypes.NOW,
