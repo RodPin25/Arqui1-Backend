@@ -1,7 +1,18 @@
 # Plataforma Web Editorial Multicanal (Arquitectura MVC)
 
-> **Proyecto Final - Hackathon de Arquitectura de Sistemas**  
+> **Proyecto Final de Arquitectura de Sistemas I · CITEIN 2026**  
+> Facultad de Ingeniería, Universidad Mesoamericana, Quetzaltenango  
 > Implementación rigurosa del patrón arquitectónico **Modelo-Vista-Controlador (MVC)** con Node.js, Express, Sequelize ORM y PostgreSQL.
+
+## Equipo
+
+| Integrante | Rol en el proyecto |
+| --- | --- |
+| Sebastián Rodrigo Rodas Pineda | Líder Técnico & Arquitecto MVC / Backend (Modelo) |
+| Arturo Alejandro Maldonado Orozco | Ingeniero de Software / Controlador e Integraciones |
+| Marcos Josué García Maldonado | Desarrollador Frontend & UX/QA (Vista y pruebas) |
+
+Proyecto final del curso Arquitectura de Sistemas I, presentado en el CITEIN 2026 de la Facultad de Ingeniería de la Universidad Mesoamericana, Quetzaltenango.
 
 ---
 
@@ -11,11 +22,24 @@ El sistema implementa una estricta separación de responsabilidades bajo el patr
 
 ```
                            +-----------------------------------------------+
-                           |                 CLIENTE / UI                  |
-                           |   (Navegador Web / Dispositivos Móviles / API)|
+                           |     NAVEGADOR (teléfono, tablet o escritorio) |
                            +-----------------------+-----------------------+
                                                    |
-                                         HTTP / JSON / REST
+                                                   v
++---------------------------------------------------------------------------------------------------+
+|                                    CAPA VISTA (View) - public/                                    |
+|                                                                                                   |
+|  - *.html, panel/*.html  : Tienda: portada, catálogo, ficha, carrito, pago, pedidos, cotizaciones |
+|                            y paneles del asesor y del administrador                               |
+|  - js/pages/*.js         : Un script por vista; valida formularios en tiempo de entrada           |
+|  - js/core/api.js        : Único contacto con el Controlador (fetch con JWT en el encabezado)     |
+|  - js/core/dom.js        : Inserta todo el texto con textContent (protección contra XSS)          |
+|  - css/libronet.css      : Diseño responsivo con Flexbox y CSS Grid                               |
+|                                                                                                   |
+|  No accede a la base de datos ni recalcula precios: muestra lo que responde el Controlador.       |
++---------------------------------------------------------------------------------------------------+
+                                                   |
+                         HTTP / JSON / REST  (Authorization: Bearer <JWT>)
                                                    |
                                                    v
 +---------------------------------------------------------------------------------------------------+
@@ -54,7 +78,7 @@ El sistema implementa una estricta separación de responsabilidades bajo el patr
                                            v
 +---------------------------------------------------------------------------------------------------+
 |                                BASE DE DATOS RELACIONAL (PostgreSQL)                              |
-|                              Esquema normalizado con 18 tablas                                    |
+|                                 Esquema normalizado con 20 tablas                                 |
 +---------------------------------------------------------------------------------------------------+
 ```
 
@@ -63,7 +87,7 @@ El sistema implementa una estricta separación de responsabilidades bajo el patr
 ## 2. Estructura de Carpetas MVC
 
 ```text
-Backend/
+Arqui1-Backend/
 ├── config/
 │   ├── cloudinary.js           # SDK Cloudinary para subida y almacenamiento de portadas
 │   ├── db.js                   # Configuración del pool de conexiones Sequelize a PostgreSQL
@@ -76,6 +100,8 @@ Backend/
 │   ├── cotizacion.controller.js# Solicitudes y propuestas comerciales B2B
 │   ├── orden.controller.js     # Checkout, sesiones de 10 min, idempotencia y confirmación
 │   └── reportes.controller.js  # Métricas financieras, reportería en tiempo real y dashboard
+├── docs/
+│   └── PLAN_DE_PRUEBAS.md      # Plan de pruebas funcionales (QA)
 ├── middlewares/
 │   ├── auth.middleware.js      # Interceptores para JWT y autorización por roles (RBAC)
 │   └── upload.middleware.js    # Multer en memoria para procesar imágenes hacia Cloudinary
@@ -101,6 +127,24 @@ Backend/
 │   ├── Perfiles_Institucionales.js # Datos corporativos de clientes mayoristas
 │   ├── Rol.js                  # Catálogo de roles del sistema
 │   └── Usuario.js              # Cuentas de usuario con hash seguro de contraseñas
+├── pruebas/
+│   └── vista.e2e.mjs           # 48 pruebas automatizadas de los flujos (Playwright)
+├── public/                     # VISTA: interfaz responsiva servida con express.static
+│   ├── index.html              # Portada: frases, estante con todo el catálogo, novedades y destacados
+│   ├── catalogo.html           # Búsqueda en tiempo real y filtros combinables
+│   ├── libro.html              # Ficha técnica del libro
+│   ├── login.html              # Inicio de sesión y registro personal o institucional
+│   ├── carrito.html            # Carrito con la liquidación que calcula el Modelo
+│   ├── checkout.html           # Cierre de orden
+│   ├── pedidos.html            # Historial y detalle de pedidos
+│   ├── solicitud.html          # Solicitud especial (cliente institucional)
+│   ├── cotizaciones.html       # Cotizaciones recibidas (cliente institucional)
+│   ├── panel/                  # Resumen, catálogo, usuarios, instituciones, órdenes y bandeja
+│   ├── css/libronet.css        # Estilos con Flexbox y CSS Grid
+│   ├── img/                    # Logotipo y favicon
+│   └── js/
+│       ├── core/               # api.js, session.js, dom.js, components.js, layout.js, frases.js
+│       └── pages/              # Un script por vista
 ├── routes/
 │   ├── auth.routes.js          # Rutas de autenticación y gestión de usuarios
 │   ├── carrito.routes.js       # Rutas del carrito de compras
@@ -119,7 +163,7 @@ Backend/
 ├── app.js                      # Configuración de Express, Swagger UI y rutas modulares
 ├── database.sql                # Entregable DDL + DML exportado para evaluación
 ├── package.json                # Dependencias y scripts de ejecución
-├── REQUIREMENTS.md             # Guía oficial de requerimientos de la hackathon
+├── REQUIREMENTS.md             # Guía oficial de requerimientos del proyecto
 └── server.js                   # Punto de entrada HTTP + WebSocket con auto-fallback de puertos
 ```
 
@@ -134,8 +178,8 @@ Backend/
 
 ### Paso 1: Clonar el Repositorio y Ubicarse en el Proyecto
 ```bash
-git clone <URL_DEL_REPOSITORIO>
-cd Backend
+git clone https://github.com/RodPin25/Arqui1-Backend.git
+cd Arqui1-Backend
 ```
 
 ### Paso 2: Instalar Dependencias
@@ -144,7 +188,7 @@ npm install
 ```
 
 ### Paso 3: Configurar Variables de Entorno (`.env`)
-Crear un archivo `.env` en la raíz de `Backend/` basándose en `.env.example`:
+Crear un archivo `.env` en la raíz del proyecto basándose en `.env.example`:
 ```env
 # Bases de datos PostgreSQL
 DB_HOST=localhost
@@ -159,7 +203,7 @@ REFRESH_TOKEN="clave_secreta_para_firmar_refresh_token"
 PORT=3000
 
 # Llave de Idempotencia para firma HMAC de transacciones de compra
-IDEMPOTENCY_KEY="QYCeYwdMlWq1Wf32NmfAxJgmh+U2AdkwMUfYcLNzw8rZHDs52GxYIw2keSVWJZR4VczwRLJz7WcP1CMJ06ovuw=="
+IDEMPOTENCY_KEY="una_clave_larga_y_secreta"
 
 # Integración con Cloudinary (Almacenamiento en la nube de portadas de libros)
 CLOUD_NAME="tu_cloud_name"
@@ -167,16 +211,15 @@ API_KEY="tu_api_key"
 API_SECRET="tu_api_secret"
 ```
 
-### Paso 4: Poblar la Base de Datos con la Data Semilla
-Ejecutar el script de inicialización para crear las tablas relacionales y registrar los usuarios de prueba, formatos, géneros, editoriales y 12 libros completos:
+### Paso 4: Crear y Cargar la Base de Datos
+Crear la base, cargar el esquema completo con los datos (DDL + DML) y asegurar los usuarios de prueba:
 ```bash
+createdb -U postgres Arqui1
+psql -U postgres -d Arqui1 -f database.sql
 npm run seed
 ```
 
-*(Opcional)* Si se desea restaurar directamente desde el archivo SQL exportado:
-```bash
-psql -U postgres -d Arqui1 -f database.sql
-```
+*(Nota)* Si `psql` muestra `invalid command \restrict`, se trata de una versión anterior de `psql`: borrar la primera línea `\restrict ...` y la última `\unrestrict ...` de `database.sql` y volver a ejecutar.
 
 ### Paso 5: Levantar el Servidor
 ```bash
@@ -188,6 +231,7 @@ npm start
 ```
 
 El servidor estará escuchando en: `http://localhost:3000` (o `3001` si el 3000 está ocupado)  
+- **Tienda y paneles (Vista):** `http://localhost:3000`
 - **Documentación Swagger UI interactiva:** `http://localhost:3000/api-docs` (o `/docs`)
 - **Especificación OpenAPI (JSON):** `http://localhost:3000/api-docs.json`
 - **Verificación de salud:** `http://localhost:3000/api/health`
@@ -302,9 +346,6 @@ Para evitar duplicidad en transacciones y garantizar una experiencia de compra c
 - `PATCH /api/cotizaciones/solicitudes/:id/asignar` *(Asesor)* : Asignarse la solicitud comercial.
 - `POST /api/cotizaciones/solicitudes/:id/propuesta` *(Asesor)* : Emisión de propuesta formal digital con costos y días de entrega.
 - `POST /api/cotizaciones/solicitudes/:id/responder` *(Institucional)* : Aprobación o rechazo de la propuesta por parte del cliente.
-- `PATCH /api/cotizaciones/solicitudes/:id/asignar` *(Asesor)* : Asignarse la solicitud comercial.
-- `POST /api/cotizaciones/solicitudes/:id/propuesta` *(Asesor)* : Emisión de propuesta formal digital con costos y días de entrega.
-- `POST /api/cotizaciones/solicitudes/:id/responder` *(Institucional)* : Aprobación o rechazo de la propuesta por parte del cliente.
 
 ### Reportería y Métricas Comerciales (`/api/reportes`)
 - `GET /api/reportes/dashboard` *(Admin/Asesor)* : Dashboard integral de métricas en tiempo real (ingresos brutos, desglose de descuentos, impuestos IVA, total facturado neto, distribución de órdenes por estado, métricas de cotizaciones B2B, alertas de stock crítico y últimas órdenes).
@@ -331,3 +372,36 @@ El servidor cuenta con un motor de eventos bidireccional en tiempo real para sin
 | `reporte:actualizado`| `reporteria` | `{ data: metricas }` emitido en tiempo real ante cualquier nueva orden o cambio de estado. |
 | `reporte:nueva_venta` | `reporteria` | `{ venta: { numero_orden, total_final, fecha } }` emitido al registrar una nueva transacción. |
 
+---
+
+## 9. Capa Vista (View): Interfaz por Rol
+
+La Vista vive en `public/` y Express la sirve con `express.static`. Es HTML, CSS y JavaScript sin dependencias ni paso de compilación. Toda la comunicación con el sistema pasa por `public/js/core/api.js`, que llama a la API REST del Controlador con el JWT en el encabezado `Authorization`. La Vista **no accede a la base de datos ni calcula descuentos**: el carrito, el pago y los pedidos muestran exactamente la liquidación que devuelve el Modelo.
+
+| Rol | Vistas disponibles |
+| --- | --- |
+| Visitante | Portada, catálogo con búsqueda en tiempo real, ficha técnica, registro e inicio de sesión |
+| Cliente Minorista | Lo anterior, carrito, cierre de orden y Mis pedidos |
+| Cliente Institucional | Lo anterior, solicitudes especiales y cotizaciones recibidas |
+| Asesor de Ventas | Bandeja de cotizaciones, validación de instituciones y monitoreo de órdenes |
+| Administrador | Resumen, gestión de catálogo (con subida de portadas a Cloudinary), usuarios, instituciones y órdenes |
+
+**Características principales**
+- **Diseño responsivo** con Flexbox y CSS Grid: navegación desplegable y tablas convertidas en fichas en teléfono; barra lateral fija y tablas completas en escritorio.
+- **Validación en tiempo de entrada** en registro, cierre de orden, solicitudes especiales y formularios del panel.
+- **Protección de rutas en la Vista:** cada página declara los roles que la pueden ver y muestra "Acceso denegado" a los demás. La autorización real la aplica el Controlador con `autorizarRoles`.
+- **Seguridad:** todo el texto que llega del Controlador se inserta con `textContent`, nunca con `innerHTML` (XSS); el token viaja en el encabezado `Authorization` y no en cookies (CSRF).
+- **Portadas en Cloudinary:** el panel de catálogo permite elegir o arrastrar una imagen, la valida en el navegador (JPG, PNG, WEBP o GIF de hasta 5 MB) y la envía como `multipart/form-data` a `/api/catalogo/subir-portada` o `/api/catalogo/libros/:id/portada`.
+
+---
+
+## 10. Plan de Pruebas (QA)
+
+El plan completo está en [`docs/PLAN_DE_PRUEBAS.md`](docs/PLAN_DE_PRUEBAS.md): 48 casos automatizados de los flujos de los cinco roles, casos manuales de Cloudinary y de interacción, revisión responsiva en 390, 768 y 1440 px, y tiempos de carga (todas las vistas por debajo de 2 segundos).
+
+Para correr las pruebas automatizadas con el servidor encendido y la base recién cargada:
+```bash
+npm install --no-save playwright
+npx playwright install chromium
+node pruebas/vista.e2e.mjs
+```
