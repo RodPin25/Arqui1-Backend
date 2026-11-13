@@ -38,14 +38,15 @@ async function request(metodo, ruta, { body, query, reintento = false } = {}) {
   for (const [k, v] of Object.entries(query || {})) {
     if (v !== undefined && v !== null && v !== "" && v !== false) url.searchParams.set(k, v);
   }
+  const esArchivo = body instanceof FormData;
   const headers = { Accept: "application/json" };
-  if (body !== undefined) headers["Content-Type"] = "application/json";
+  if (body !== undefined && !esArchivo) headers["Content-Type"] = "application/json";
   const token = accessToken();
   if (token) headers.Authorization = `Bearer ${token}`;
 
   let respuesta;
   try {
-    respuesta = await fetch(url, { method: metodo, headers, body: body === undefined ? undefined : JSON.stringify(body) });
+    respuesta = await fetch(url, { method: metodo, headers, body: body === undefined || esArchivo ? body : JSON.stringify(body) });
   } catch {
     throw new ApiError("No se pudo conectar con el servidor. Revisa tu conexión e intenta de nuevo.", 0);
   }
@@ -70,6 +71,11 @@ const post = (ruta, body = {}) => request("POST", ruta, { body });
 const put = (ruta, body = {}) => request("PUT", ruta, { body });
 const patch = (ruta, body = {}) => request("PATCH", ruta, { body });
 const del = (ruta) => request("DELETE", ruta);
+const enviarArchivo = (metodo, ruta, campo, archivo) => {
+  const datos = new FormData();
+  datos.append(campo, archivo);
+  return request(metodo, ruta, { body: datos });
+};
 
 export const authApi = {
   login: (email, password) => post("/auth/login", { email, password }),
@@ -93,6 +99,9 @@ export const catalogoApi = {
   crearProducto: (datos) => post("/catalogo", datos),
   actualizarProducto: (id, datos) => put(`/catalogo/${encodeURIComponent(id)}`, datos),
   eliminarProducto: (id) => del(`/catalogo/${encodeURIComponent(id)}`),
+  subirPortada: (archivo) => enviarArchivo("POST", "/catalogo/subir-portada", "portada", archivo),
+  cambiarPortada: (libroId, archivo) => enviarArchivo("PATCH", `/catalogo/libros/${encodeURIComponent(libroId)}/portada`, "portada", archivo),
+  actualizarLibro: (libroId, datos) => put(`/catalogo/libros/${encodeURIComponent(libroId)}`, datos),
   crearAutor: (datos) => post("/catalogo/autores", datos),
   crearGenero: (datos) => post("/catalogo/generos", datos),
   crearEditorial: (datos) => post("/catalogo/editoriales", datos),
