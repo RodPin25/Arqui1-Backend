@@ -2,7 +2,7 @@
 
 import { h, mount, icon, money, fecha, nombreCompleto, sinAcentos, modal, ocupado, toast, params } from "../core/dom.js";
 import { iniciarPagina } from "../core/layout.js";
-import { ordenesApi } from "../core/api.js";
+import { ordenesApi, catalogoApi } from "../core/api.js";
 import { escucharEvento } from "../core/socket.js";
 import { insignia, cargando, errorEstado, titulo } from "../core/components.js";
 import { detalleOrden, ESTADOS_ORDEN } from "./orden-detalle.js";
@@ -12,6 +12,18 @@ const pagina = iniciarPagina({ zona: "panel", titulo: "Órdenes", roles: ["aseso
 const filtro = { estado: params().get("estado") || "", q: "" };
 let ordenes = [];
 const tabla = h("div", { class: "table-wrap" });
+
+async function devolverStockOrden(orden) {
+  const detalles = orden.detalles || [];
+  for (const d of detalles) {
+    const productoId = d.producto_id || d.producto?.id;
+    const cantidad = Number(d.cantidad || 0);
+    if (!productoId || cantidad <= 0) continue;
+    const prod = (await catalogoApi.producto(productoId)).data;
+    const stockActual = Number(prod?.stock_disponible ?? d.producto?.stock_disponible ?? 0);
+    await catalogoApi.actualizarStock(productoId, stockActual + cantidad);
+  }
+}
 
 function abrir(o) {
   const selector = h("select", { name: "estado" }, ESTADOS_ORDEN.map((e) => h("option", { selected: e === o.estado }, e)));
@@ -24,7 +36,16 @@ function abrir(o) {
     if (selector.value === o.estado) return cerrar();
     try {
       await ordenesApi.cambiarEstado(o.id, selector.value);
-      toast(`Orden actualizada a ${selector.value.toLowerCase()}`);
+      if (selector.value === "Cancelado" && o.estado !== "Cancelado") {
+        try {
+          await devolverStockOrden(o);
+          toast("Orden cancelada y stock devuelto al catálogo");
+        } catch (errStock) {
+          toast(`Orden cancelada, pero no se pudo devolver el stock: ${errStock.message}`, { error: true });
+        }
+      } else {
+        toast(`Orden actualizada a ${selector.value.toLowerCase()}`);
+      }
       cerrar();
       await cargar(false);
     } catch (error) {

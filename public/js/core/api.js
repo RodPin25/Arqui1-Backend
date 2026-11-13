@@ -98,6 +98,7 @@ export const catalogoApi = {
   editoriales: () => get("/catalogo/editoriales"),
   crearProducto: (datos) => post("/catalogo", datos),
   actualizarProducto: (id, datos) => put(`/catalogo/${encodeURIComponent(id)}`, datos),
+  actualizarStock: (id, stock_disponible) => patch(`/catalogo/${encodeURIComponent(id)}/stock`, { stock_disponible }),
   eliminarProducto: (id) => del(`/catalogo/${encodeURIComponent(id)}`),
   subirPortada: (archivo) => enviarArchivo("POST", "/catalogo/subir-portada", "portada", archivo),
   cambiarPortada: (libroId, archivo) => enviarArchivo("PATCH", `/catalogo/libros/${encodeURIComponent(libroId)}/portada`, "portada", archivo),
