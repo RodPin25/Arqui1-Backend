@@ -27,8 +27,7 @@ function validarFormulario(form) {
   return invalidos.length === 0;
 }
 
-function editarProducto(p) {
-  /* ---------- Portadas (Cloudinary) ---------- */
+/* ---------- Portadas (Cloudinary) ---------- */
 
 const TIPOS_IMAGEN = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 const PESO_MAXIMO = 5 * 1024 * 1024;
@@ -145,7 +144,6 @@ function editarProducto(p) {
   h("p", { class: "field-note" }, "La portada se cambia en todos los formatos de este libro."),
   h("div", { class: "form-grid" }, campo("Precio base (Q)", precio), campo("Stock disponible", stock)),
   boton));
-}
 }
 
 function nuevoProducto() {
