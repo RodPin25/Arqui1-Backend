@@ -28,22 +28,111 @@ function validarFormulario(form) {
 }
 
 function editarProducto(p) {
+  /* ---------- Portadas (Cloudinary) ---------- */
+
+const TIPOS_IMAGEN = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const PESO_MAXIMO = 5 * 1024 * 1024;
+let selectores = 0;
+
+/**
+ * Selector de portada con vista previa: el archivo se elige o se arrastra,
+ * se valida en el navegador y el Controlador lo sube a Cloudinary al guardar.
+ */
+function selectorPortada(libro = {}) {
+  const id = `portada-${++selectores}`;
+  let archivo = null;
+  let vistaPrevia = null;
+  const input = h("input", { id, type: "file", accept: TIPOS_IMAGEN.join(","), class: "sr-only" });
+  const enlace = h("input", { type: "url", placeholder: "https://…", value: libro.portada_url || "", "aria-label": "Enlace de la imagen de portada" });
+  const previa = h("div", { class: "cover-preview" });
+  const detalle = h("small", { class: "cover-file" });
+  const error = h("small", { class: "error-text", "aria-live": "polite" });
+  const quitar = h("button", { type: "button", class: "text-link", hidden: true, onclick: () => elegir(null) }, "Quitar");
+
+  const pintarPrevia = () => mount(previa, vistaPrevia
+    ? h("div", { class: "cover has-image" }, h("img", { src: vistaPrevia, alt: "Vista previa de la nueva portada" }))
+    : portada({ ...libro, portada_url: enlace.value.trim() || libro.portada_url }));
+
+  function elegir(nuevo) {
+    error.textContent = "";
+    if (nuevo && !TIPOS_IMAGEN.includes(nuevo.type)) { error.textContent = "Usa una imagen JPG, PNG, WEBP o GIF."; return; }
+    if (nuevo && nuevo.size > PESO_MAXIMO) { error.textContent = "La imagen pesa más de 5 MB. Elige una más ligera."; return; }
+    if (vistaPrevia) URL.revokeObjectURL(vistaPrevia);
+    archivo = nuevo;
+    vistaPrevia = nuevo ? URL.createObjectURL(nuevo) : null;
+    input.value = "";
+    const peso = (b) => (b < 1024 * 1024 ? `${Math.max(1, Math.round(b / 1024))} KB` : `${(b / 1024 / 1024).toFixed(1)} MB`);
+    detalle.textContent = nuevo ? `${nuevo.name} · ${peso(nuevo.size)}` : "JPG, PNG, WEBP o GIF, hasta 5 MB";
+    quitar.hidden = !nuevo;
+    pintarPrevia();
+  }
+
+  input.addEventListener("change", () => elegir(input.files[0] || null));
+  enlace.addEventListener("change", () => !archivo && pintarPrevia());
+
+  const zona = h("div", {
+    class: "cover-drop",
+    ondragover: (e) => { e.preventDefault(); zona.classList.add("dragging"); },
+    ondragleave: () => zona.classList.remove("dragging"),
+    ondrop: (e) => { e.preventDefault(); zona.classList.remove("dragging"); elegir(e.dataTransfer.files[0] || null); },
+  },
+  previa,
+  h("div", { class: "cover-drop-copy" },
+    h("b", {}, "Portada"),
+    h("p", {}, "Arrastra una imagen aquí o elígela de tu computadora. Se guarda en Cloudinary."),
+    h("div", { class: "cover-actions" },
+      h("label", { class: "btn ghost small", for: id }, icon("upload", 16), "Elegir imagen"),
+      quitar),
+    detalle,
+    error,
+    h("details", { class: "cover-link" }, h("summary", {}, "Usar un enlace de imagen"), enlace)),
+  input);
+
+  elegir(null);
+  return {
+    el: zona,
+    archivo: () => archivo,
+    enlace: () => enlace.value.trim(),
+    refrescar: (cambios) => { Object.assign(libro, cambios); if (!archivo) pintarPrevia(); },
+  };
+}
+
+/** Errores de subida explicados para el administrador. */
+function errorDePortada(error) {
+  if (error.status === 500) return new Error("No se pudo subir la portada. Revisa que las llaves de Cloudinary estén en el .env del servidor.");
+  return error;
+}
+
+function editarProducto(p) {
   const precio = h("input", { type: "number", min: "0.01", step: "0.01", required: true, value: p.precio_base });
   const stock = h("input", { type: "number", min: "0", step: "1", required: true, value: p.stock_disponible });
+  const selector = selectorPortada({ ...p.libro });
   const boton = h("button", { class: "btn full", type: "submit" }, "Guardar cambios");
   const cerrar = modal(`Editar ${p.libro?.titulo}`, h("form", {
     novalidate: true,
     onsubmit: (e) => {
       e.preventDefault();
       if (!validarFormulario(e.currentTarget)) return;
+      const texto = boton.textContent;
       ocupado(boton, async () => {
         try {
+          const archivo = selector.archivo();
+          const enlace = selector.enlace();
+          if (archivo) {
+            boton.textContent = "Subiendo portada…";
+            await catalogoApi.cambiarPortada(p.libro_id, archivo).catch((err) => { throw errorDePortada(err); });
+          } else if (enlace !== (p.libro?.portada_url || "")) {
+            await catalogoApi.actualizarLibro(p.libro_id, { portada_url: enlace || null });
+          }
+          boton.textContent = "Guardando…";
           await catalogoApi.actualizarProducto(p.id, { precio_base: Number(precio.value), stock_disponible: Number(stock.value) });
-          toast("Libro actualizado");
+          toast(archivo ? "Libro y portada actualizados" : "Libro actualizado");
           cerrar();
           await cargar(false);
         } catch (error) {
           toast(error.message, { error: true });
+        } finally {
+          boton.textContent = texto;
         }
       });
     },
@@ -52,8 +141,11 @@ function editarProducto(p) {
     h("tbody", {},
       h("tr", {}, h("th", {}, "Formato"), h("td", {}, p.formato?.nombre)),
       h("tr", {}, h("th", {}, "ISBN"), h("td", {}, p.isbn)))),
+  selector.el,
+  h("p", { class: "field-note" }, "La portada se cambia en todos los formatos de este libro."),
   h("div", { class: "form-grid" }, campo("Precio base (Q)", precio), campo("Stock disponible", stock)),
   boton));
+}
 }
 
 function nuevoProducto() {
@@ -63,8 +155,8 @@ function nuevoProducto() {
   const libroSel = h("select", { required: true }, h("option", { value: "" }, "Elige un libro"), libros.map((l) => h("option", { value: l.id }, l.titulo)));
   const tituloIn = h("input", { required: true, minlength: "2", maxlength: "200" });
   const anio = h("input", { type: "number", min: "1450", max: String(new Date().getFullYear() + 1), required: true, value: String(new Date().getFullYear()) });
-  const sinopsis = h("textarea", { maxlength: "2000" });
-  const portadaUrl = h("input", { type: "url", placeholder: "https://…" });
+  const sinopsis = h("textarea", { required: true, minlength: "10", maxlength: "2000", placeholder: "De qué trata el libro, en dos o tres frases." });
+  const selector = selectorPortada({ id: 0, titulo: "" });
   const autorSel = h("select", { required: true }, h("option", { value: "" }, "Elige un autor"), datos.autores.map((a) => h("option", { value: a.id }, nombreCompleto(a))));
   const generoSel = h("select", { required: true }, h("option", { value: "" }, "Elige un género"), datos.generos.map((g) => h("option", { value: g.id }, g.nombre)));
   const editorialSel = h("select", { required: true }, h("option", { value: "" }, "Elige una editorial"), datos.editoriales.map((e) => h("option", { value: e.id }, e.nombre)));
@@ -80,6 +172,7 @@ function nuevoProducto() {
       libres.map((f) => h("option", { value: f.id }, f.nombre)));
   };
   libroSel.addEventListener("change", pintarFormatos);
+  tituloIn.addEventListener("input", () => selector.refrescar({ titulo: tituloIn.value.trim() }));
   const isbn = h("input", { required: true, pattern: "[0-9\\-Xx]{10,17}", placeholder: "978-0000000000", title: "ISBN de 10 o 13 dígitos" });
   const precio = h("input", { type: "number", min: "0.01", step: "0.01", required: true });
   const stock = h("input", { type: "number", min: "0", step: "1", required: true, value: "0" });
@@ -93,7 +186,7 @@ function nuevoProducto() {
       ? campo("Libro", libroSel)
       : h("div", { class: "form-grid" },
           campo("Título", tituloIn, true), campo("Autor", autorSel), campo("Género", generoSel), campo("Editorial", editorialSel), campo("Año de edición", anio),
-          campo("Portada (URL de imagen)", portadaUrl, true), campo("Sinopsis", sinopsis, true)),
+          h("div", { class: "field wide" }, selector.el), campo("Sinopsis", sinopsis, true)),
     h("div", { class: "form-grid" }, campo("Formato", formato), campo("ISBN", isbn), campo("Precio base (Q)", precio), campo("Stock inicial", stock)),
     boton); };
   pintar();
@@ -107,18 +200,28 @@ function nuevoProducto() {
       if (modo === "existente") cuerpoApi.libro_id = libroSel.value;
       else cuerpoApi.libroNuevo = {
         titulo: tituloIn.value.trim(), sinopsis: sinopsis.value.trim(), anio_edicion: Number(anio.value),
-        portada_url: portadaUrl.value.trim() || null, autores_ids: [autorSel.value], generos_ids: [generoSel.value], editorial_id: editorialSel.value,
+        portada_url: selector.enlace() || null, autores_ids: [autorSel.value], generos_ids: [generoSel.value], editorial_id: editorialSel.value,
       };
-      ocupado(boton, async () => {
-        try {
-          await catalogoApi.crearProducto(cuerpoApi);
-          toast("Libro agregado al catálogo");
-          cerrar();
-          await cargar(false);
-        } catch (error) {
-          toast(error.message, { error: true });
-        }
-      });
+  const texto = boton.textContent;
+         ocupado(boton, async () => {
+           try {
+             // Primero se sube la portada a Cloudinary y su URL se guarda con el libro nuevo.
+             if (modo === "nuevo" && selector.archivo()) {
+               boton.textContent = "Subiendo portada…";
+               const subida = await catalogoApi.subirPortada(selector.archivo()).catch((err) => { throw errorDePortada(err); });
+               cuerpoApi.libroNuevo.portada_url = subida.data.url;
+             }
+             boton.textContent = "Guardando…";
+             await catalogoApi.crearProducto(cuerpoApi);
+             toast("Libro agregado al catálogo");
+             cerrar();
+             await cargar(false);
+           } catch (error) {
+             toast(error.message, { error: true });
+           } finally {
+             boton.textContent = texto;
+           }
+         });
     },
   }, cuerpo));
 }

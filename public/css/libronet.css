@@ -3762,3 +3762,93 @@ input[role="switch"]:checked::after {
     width: 100%;
   }
 }
+
+
+/* Selector de portada (Cloudinary) en el panel de catálogo */
+.cover-drop {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+  padding: 14px;
+  margin-bottom: 16px;
+  border: 1.5px dashed var(--line-strong);
+  border-radius: 8px;
+  background: var(--mist);
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+.cover-drop.dragging {
+  border-color: var(--blue);
+  background: var(--blue-bg);
+}
+.cover-preview {
+  width: 88px;
+}
+.cover-drop-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  font-weight: 400;
+}
+.cover-drop-copy > b {
+  font-weight: 600;
+}
+.cover-drop-copy > p {
+  color: var(--slate);
+  font-size: 0.875rem;
+}
+.cover-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: 4px;
+}
+.cover-actions .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+.cover-drop:focus-within .cover-actions label {
+  outline: 2px solid color-mix(in srgb, var(--blue) 30%, transparent);
+  outline-offset: 2px;
+}
+.cover-file {
+  color: var(--slate);
+  font-size: 0.8125rem;
+  overflow-wrap: anywhere;
+}
+.cover-link {
+  margin-top: 4px;
+  font-size: 0.875rem;
+}
+.cover-link summary {
+  cursor: pointer;
+  color: var(--blue);
+  font-weight: 500;
+}
+.cover-link input {
+  margin-top: 8px;
+  min-height: 42px;
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--white);
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+}
+.field-note {
+  margin: -8px 0 16px;
+  color: var(--slate);
+  font-size: 0.8125rem;
+}
+@media (max-width: 560px) {
+  .cover-drop {
+    grid-template-columns: 64px minmax(0, 1fr);
+    gap: 12px;
+  }
+  .cover-preview {
+    width: 64px;
+  }
+}
