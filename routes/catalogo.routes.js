@@ -53,6 +53,7 @@ router.post("/subir-portada", verificarToken, autorizarRoles("ADMIN", "ADMINISTR
 router.patch("/:id/stock", verificarToken, autorizarRoles("ADMIN", "ADMINISTRADOR"), actualizarStock);
 router.post("/libros", verificarToken, autorizarRoles("ADMIN", "ADMINISTRADOR"), uploadPortada, crearLibro);
 router.put("/libros/:id", verificarToken, autorizarRoles("ADMIN", "ADMINISTRADOR"), uploadPortada, actualizarLibro);
+router.patch("/libros/:id", verificarToken, autorizarRoles("ADMIN", "ADMINISTRADOR"), uploadPortada, actualizarLibro);
 router.patch("/libros/:id/portada", verificarToken, autorizarRoles("ADMIN", "ADMINISTRADOR"), uploadPortada, actualizarPortadaLibro);
 router.post("/autores", verificarToken, autorizarRoles("ADMIN", "ADMINISTRADOR", "ASESOR", "ASESOR_VENTAS"), crearAutor);
 router.put("/autores/:id", verificarToken, autorizarRoles("ADMIN", "ADMINISTRADOR"), actualizarAutor);

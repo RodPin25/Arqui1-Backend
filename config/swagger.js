@@ -299,6 +299,84 @@ Documentación técnica interactiva de la **Plataforma Web Editorial Multicanal*
       },
     },
 
+    "/api/catalogo/libros/{id}": {
+      patch: {
+        tags: ["Catálogo y Libros"],
+        summary: "Actualización parcial de la información del libro (Admin - RF-05.1)",
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer" } }],
+        requestBody: {
+          content: {
+            "multipart/form-data": {
+              schema: {
+                type: "object",
+                properties: {
+                  titulo: { type: "string" },
+                  sinopsis: { type: "string" },
+                  anio_edicion: { type: "integer" },
+                  editorial_id: { type: "integer" },
+                  autores_ids: { type: "string", description: "JSON Array de IDs, ej: [1, 2]" },
+                  generos_ids: { type: "string", description: "JSON Array de IDs, ej: [3]" },
+                  portada: { type: "string", format: "binary", description: "Nueva imagen de portada (opcional)" },
+                  portada_url: { type: "string", description: "URL directa alternativa para la portada" },
+                  activo: { type: "boolean" },
+                },
+              },
+            },
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  titulo: { type: "string" },
+                  sinopsis: { type: "string" },
+                  anio_edicion: { type: "integer" },
+                  editorial_id: { type: "integer" },
+                  autores_ids: { type: "array", items: { type: "integer" } },
+                  generos_ids: { type: "array", items: { type: "integer" } },
+                  portada_url: { type: "string" },
+                  activo: { type: "boolean" },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: { description: "Información del libro actualizada exitosamente" },
+          404: { description: "Libro no encontrado" },
+        },
+      },
+      put: {
+        tags: ["Catálogo y Libros"],
+        summary: "Actualizar libro completo (Admin - RF-05.1)",
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer" } }],
+        requestBody: {
+          content: {
+            "multipart/form-data": {
+              schema: {
+                type: "object",
+                properties: {
+                  titulo: { type: "string" },
+                  sinopsis: { type: "string" },
+                  anio_edicion: { type: "integer" },
+                  editorial_id: { type: "integer" },
+                  autores_ids: { type: "string" },
+                  generos_ids: { type: "string" },
+                  portada: { type: "string", format: "binary" },
+                  portada_url: { type: "string" },
+                  activo: { type: "boolean" },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: { description: "Libro actualizado exitosamente" },
+          404: { description: "Libro no encontrado" },
+        },
+      },
+    },
+
     "/api/catalogo/libros/{id}/portada": {
       patch: {
         tags: ["Catálogo y Libros"],

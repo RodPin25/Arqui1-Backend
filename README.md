@@ -322,6 +322,7 @@ Para evitar duplicidad en transacciones y garantizar una experiencia de compra c
 - `POST /api/catalogo/subir-portada` *(Admin)* : Subir archivo de imagen (Multer multipart/form-data) directamente a Cloudinary y obtener `url`.
 - `POST /api/catalogo/libros` *(Admin)* : Crear libro (acepta `portada` como archivo físico o URL directa).
 - `PUT /api/catalogo/libros/:id` *(Admin)* : Actualizar libro y su portada.
+- `PATCH /api/catalogo/libros/:id` *(Admin)* : Actualización parcial de la información del libro (título, sinopsis, año, autores, géneros, editorial, estado activo y portada).
 - `PATCH /api/catalogo/libros/:id/portada` *(Admin)* : Actualizar exclusivamente la portada del libro subiendo una nueva imagen a Cloudinary.
 
 ### Autores (`/api/autores` y `/api/catalogo/autores`)

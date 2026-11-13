@@ -622,7 +622,16 @@ export const crearLibro = async (req, res) => {
 export const actualizarLibro = async (req, res) => {
   try {
     const { id } = req.params;
-    let { titulo, sinopsis, anio_edicion, portada_url, activo } = req.body;
+    let {
+      titulo,
+      sinopsis,
+      anio_edicion,
+      portada_url,
+      activo,
+      autores_ids,
+      generos_ids,
+      editorial_id,
+    } = req.body;
 
     const libro = await Libros.findByPk(id);
     if (!libro) return res.status(404).json({ ok: false, mensaje: "Libro no encontrado" });
@@ -635,13 +644,62 @@ export const actualizarLibro = async (req, res) => {
 
     if (titulo !== undefined) libro.titulo = titulo.trim();
     if (sinopsis !== undefined) libro.sinopsis = sinopsis.trim();
-    if (anio_edicion !== undefined) libro.anio_edicion = anio_edicion;
+    if (anio_edicion !== undefined) libro.anio_edicion = parseInt(anio_edicion, 10);
     if (portada_url !== undefined) libro.portada_url = portada_url;
-    if (activo !== undefined) libro.activo = activo;
+    if (activo !== undefined) libro.activo = (activo === true || activo === "true" || activo === 1 || activo === "1");
 
     await libro.save();
-    return res.status(200).json({ ok: true, mensaje: "Libro actualizado", data: libro });
+
+    // Actualización de relaciones N:M o N:1 si se proporcionan en el PATCH / PUT
+    if (autores_ids !== undefined) {
+      if (typeof autores_ids === "string") {
+        try {
+          autores_ids = JSON.parse(autores_ids);
+        } catch (_) {
+          autores_ids = [autores_ids];
+        }
+      }
+      if (Array.isArray(autores_ids)) {
+        await libro.setAutores(autores_ids);
+      }
+    }
+
+    if (generos_ids !== undefined) {
+      if (typeof generos_ids === "string") {
+        try {
+          generos_ids = JSON.parse(generos_ids);
+        } catch (_) {
+          generos_ids = [generos_ids];
+        }
+      }
+      if (Array.isArray(generos_ids)) {
+        await libro.setGeneros(generos_ids);
+      }
+    }
+
+    if (editorial_id !== undefined) {
+      if (editorial_id) {
+        await libro.setEditoriales([editorial_id]);
+      } else {
+        await libro.setEditoriales([]);
+      }
+    }
+
+    const libroCompleto = await Libros.findByPk(libro.id, {
+      include: [
+        { model: Autores, as: "autores", through: { attributes: [] } },
+        { model: Generos, as: "generos", through: { attributes: [] } },
+        { model: Editorial, as: "editoriales", through: { attributes: [] } },
+      ],
+    });
+
+    return res.status(200).json({
+      ok: true,
+      mensaje: "Información del libro actualizada exitosamente",
+      data: libroCompleto,
+    });
   } catch (error) {
+    console.error("Error al actualizar libro:", error);
     return res.status(500).json({ ok: false, error: error.message });
   }
 };

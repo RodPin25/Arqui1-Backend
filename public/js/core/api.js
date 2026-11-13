@@ -102,6 +102,7 @@ export const catalogoApi = {
   subirPortada: (archivo) => enviarArchivo("POST", "/catalogo/subir-portada", "portada", archivo),
   cambiarPortada: (libroId, archivo) => enviarArchivo("PATCH", `/catalogo/libros/${encodeURIComponent(libroId)}/portada`, "portada", archivo),
   actualizarLibro: (libroId, datos) => put(`/catalogo/libros/${encodeURIComponent(libroId)}`, datos),
+  editarLibro: (libroId, datos) => patch(`/catalogo/libros/${encodeURIComponent(libroId)}`, datos),
   crearAutor: (datos) => post("/catalogo/autores", datos),
   obtenerAutor: (id) => get(`/catalogo/autores/${encodeURIComponent(id)}`),
   actualizarAutor: (id, datos) => put(`/catalogo/autores/${encodeURIComponent(id)}`, datos),
