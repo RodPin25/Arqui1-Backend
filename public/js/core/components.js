@@ -69,23 +69,74 @@ export function portada(libro = {}) {
   return caja;
 }
 
-/** Estante de la portada: cada lomo abre la ficha del libro. */
+/** Estante de la portada: un lomo por libro; la rueda del mouse lo recorre de lado. */
 export function estante(productos) {
   const tamanos = [[62, 92], [48, 80], [40, 86], [58, 96], [70, 84], [44, 90], [54, 78], [46, 94], [64, 88], [50, 82], [60, 98], [38, 76]];
+  const conLibro = productos.filter((p) => p.libro);
+  // Como en una librería: cada ejemplar impreso tiene su lomo (tapa dura y tapa blanda).
+  const fisicos = conLibro.filter((p) => /f[ií]sico/i.test(`${p.formato?.codigo || ""} ${p.formato?.nombre || ""}`));
   const vistos = new Set();
-  const unicos = productos.filter((p) => p.libro && !vistos.has(p.libro.id) && vistos.add(p.libro.id));
-  return h("div", { class: "shelf", role: "list", "aria-label": "Libros en el estante" },
-    unicos.map((prod, i) => {
-      const [w, alto] = tamanos[i % tamanos.length];
+  const lomos = fisicos.length
+    ? fisicos
+    : conLibro.filter((p) => !vistos.has(p.libro.id) && vistos.add(p.libro.id));
+  const titulos = new Set(lomos.map((p) => p.libro.id)).size;
+
+  const repisa = h("div", { class: "shelf", role: "list", tabindex: "0", "aria-label": `Estante con ${lomos.length} libros` },
+    lomos.map((prod, i) => {
+      const [base, alto] = tamanos[Number(prod.libro.id) % tamanos.length || 0];
+      const dura = /dura|_TD/i.test(`${prod.formato?.codigo || ""} ${prod.formato?.nombre || ""}`);
       const pal = paletaDe(prod.libro.id);
+      const formato = fisicos.length ? (dura ? "TD" : "TB") : "";
       const a = h("a", {
-        class: "spine", href: `/libro.html?id=${encodeURIComponent(prod.id)}`, role: "listitem",
-        "aria-label": `${prod.libro.titulo}, de ${autoresDe(prod.libro)}`,
-        style: { background: pal.bg, color: pal.fg, width: `${w}px`, height: `${alto}%`, animationDelay: `${i * 45}ms` },
-      }, h("span", {}, prod.libro.titulo));
+        class: dura ? "spine hardcover" : "spine", href: `/libro.html?id=${encodeURIComponent(prod.id)}`, role: "listitem",
+        "aria-label": `${prod.libro.titulo}, de ${autoresDe(prod.libro)}${prod.formato?.nombre ? `, ${prod.formato.nombre}` : ""}`,
+        style: {
+          background: pal.bg, color: pal.fg,
+          width: `${base + (dura ? 10 : 0)}px`, height: `${Math.min(100, alto + (dura ? 4 : -2))}%`,
+          animationDelay: `${Math.min(i, 16) * 45}ms`,
+        },
+      }, h("span", {}, prod.libro.titulo), formato && h("small", { class: "spine-label", "aria-hidden": "true" }, formato));
       a.style.setProperty("--tick", pal.ac);
       return a;
     }));
+
+  // Bordes difuminados solo del lado en que quedan libros por ver.
+  const bordes = () => {
+    const max = repisa.scrollWidth - repisa.clientWidth;
+    repisa.classList.toggle("more-left", repisa.scrollLeft > 2);
+    repisa.classList.toggle("more-right", max - repisa.scrollLeft > 2);
+  };
+
+  // La rueda vertical mueve el estante; en los extremos deja seguir el scroll de la página.
+  let destino = null;
+  let animando = false;
+  const animar = () => {
+    const paso = (destino - repisa.scrollLeft) * 0.22;
+    if (Math.abs(paso) < 0.5) { repisa.scrollLeft = destino; destino = null; animando = false; return; }
+    repisa.scrollLeft += paso;
+    requestAnimationFrame(animar);
+  };
+  repisa.addEventListener("wheel", (e) => {
+    if (Math.abs(e.deltaX) >= Math.abs(e.deltaY)) return;
+    const max = repisa.scrollWidth - repisa.clientWidth;
+    if (max <= 0) return;
+    const actual = destino ?? repisa.scrollLeft;
+    const delta = e.deltaY * (e.deltaMode === 1 ? 32 : e.deltaMode === 2 ? repisa.clientWidth : 1);
+    if ((delta < 0 && actual <= 0) || (delta > 0 && actual >= max)) return;
+    e.preventDefault();
+    destino = Math.max(0, Math.min(max, actual + delta));
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) { repisa.scrollLeft = destino; destino = null; return; }
+    if (!animando) { animando = true; requestAnimationFrame(animar); }
+  }, { passive: false });
+  repisa.addEventListener("scroll", bordes, { passive: true });
+  new ResizeObserver(bordes).observe(repisa);
+
+  return h("div", { class: "shelf-area" },
+    lomos.length > 6 && h("p", { class: "shelf-hint" },
+      fisicos.length ? `${lomos.length} ejemplares de ${titulos} títulos · ` : `${lomos.length} libros · `,
+      h("span", { class: "hint-mouse" }, "usa la rueda del mouse para recorrer el estante"),
+      h("span", { class: "hint-touch" }, "desliza para recorrer el estante")),
+    repisa);
 }
 
 /** Tarjeta de libro para las cuadrículas del catálogo. */

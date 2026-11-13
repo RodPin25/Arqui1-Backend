@@ -48,8 +48,21 @@ function render() {
   let registro = q.has("registro");
   let tipo = q.get("registro") === "institucional" ? "institucional" : "personal";
   const tarjeta = h("div", { class: "auth-card" });
+  const mensaje = h("div", { class: "auth-message" });
+
+  // El panel de marca cambia su mensaje según el modo: ingreso, cuenta personal o institucional.
+  const pintarMarca = () => {
+    const modo = !registro ? "ingreso" : tipo;
+    const { titulo: t, texto, ventajas } = MENSAJES[modo];
+    mensaje.dataset.modo = modo;
+    mount(mensaje,
+      h("h1", {}, t),
+      h("p", {}, texto),
+      h("ul", { class: "auth-perks" }, ventajas.map((v) => h("li", {}, icon("check", 15), v))));
+  };
 
   const pintar = () => {
+    pintarMarca();
     const campos = {
       email: campo("email", "Correo electrónico", { type: "email", placeholder: "nombre@correo.com", autocomplete: "email" }),
       password: campo("password", "Contraseña", { type: "password", placeholder: "Mínimo 8 caracteres", autocomplete: registro ? "new-password" : "current-password" }),
@@ -131,16 +144,41 @@ function render() {
       h("p", {}, "Ya puedes explorar el catálogo. Te avisaremos a ", h("b", {}, email), " cuando tu institución quede validada."),
       h("a", { class: "btn full", href: "/catalogo.html" }, "Explorar el catálogo")));
 
-  mount(main,
-    h("div", { class: "auth-wrap" },
-      h("div", { class: "auth-brand" },
-        h("img", { src: "/img/logo-claro.svg", alt: "LibroNet", width: "210", style: { width: "210px" } }),
-        h("div", {},
-          h("h1", {}, "Tu biblioteca empieza con una buena historia."),
-          h("p", {}, "Accede a compras, descuentos por volumen, pedidos y soluciones editoriales a tu medida."))),
-      tarjeta));
+  const marca = h("aside", { class: "auth-brand" },
+    h("div", { class: "auth-brand-pane" },
+      h("span", { class: "auth-mark", "aria-hidden": "true" }),
+      h("div", { class: "auth-brand-inner" },
+        h("img", { class: "auth-logo", src: "/img/logo-claro.svg", alt: "LibroNet", width: "320", height: "161" }),
+        h("span", { class: "auth-rule", "aria-hidden": "true" }),
+        mensaje)));
+  const envoltura = h("div", { class: "auth-wrap" }, marca, tarjeta);
+  mount(main, envoltura);
+
+  // El panel queda fijo mientras se llena el formulario, justo debajo del encabezado.
+  const encabezado = document.querySelector(".store-header");
+  const medir = () => envoltura.style.setProperty("--header-h", `${encabezado?.offsetHeight || 0}px`);
+  medir();
+  if (encabezado) new ResizeObserver(medir).observe(encabezado);
   pintar();
 }
+
+const MENSAJES = {
+  ingreso: {
+    titulo: "Tu biblioteca empieza con una buena historia.",
+    texto: "Entra para retomar tu carrito, revisar tus pedidos y seguir tus cotizaciones.",
+    ventajas: ["Carrito guardado en tu cuenta", "Historial de pedidos", "Cotizaciones en línea"],
+  },
+  personal: {
+    titulo: "Lee a tu ritmo, compra a tu medida.",
+    texto: "Crea tu cuenta personal en menos de un minuto y empieza a armar tu biblioteca.",
+    ventajas: ["5% desde 6 unidades", "Pedidos con seguimiento", "Catálogo completo"],
+  },
+  institucional: {
+    titulo: "Libros por volumen para tu institución.",
+    texto: "Colegios, universidades y empresas compran con escalas especiales y cotizaciones a la medida.",
+    ventajas: ["Hasta 15% por volumen", "8% adicional institucional", "Ediciones especiales bajo pedido"],
+  },
+};
 
 if (pagina) {
   if (rolDe() !== "visitante" && !params().has("registro")) location.replace(destino());

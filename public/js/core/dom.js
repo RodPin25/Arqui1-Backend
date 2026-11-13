@@ -91,6 +91,8 @@ const ICONOS = {
   close: ["m6 6 12 12M18 6 6 18"],
   trash: ["M4 7h16M9 7V4h6v3M7 7l1 14h8l1-14M10 11v6M14 11v6"],
   plus: ["M12 5v14M5 12h14"],
+  pause: ["M9 5v14M15 5v14"],
+  play: ["M8 5v14l11-7z"],
   filter: ["M4 5h16l-6 8v6l-4-2v-4z"],
   logout: ["M15 4h4v16h-4", "M10 17l5-5-5-5M15 12H3"],
 };
