@@ -9,6 +9,7 @@ import {
   sequelize,
 } from "../models/index.js";
 import { subirACloudinary } from "../config/cloudinary.js";
+import { emitirCatalogoActualizado } from "../services/socket.service.js";
 
 export {
   listarAutores,
@@ -330,6 +331,8 @@ export const crearProducto = async (req, res) => {
       ],
     });
 
+    emitirCatalogoActualizado({ motivo: "producto_creado", producto_id: productoCreado?.id });
+
     return res.status(201).json({
       ok: true,
       mensaje: "Producto agregado exitosamente al catálogo",
@@ -364,6 +367,7 @@ export const actualizarProducto = async (req, res) => {
     if (activo !== undefined) producto.activo = activo;
 
     await producto.save();
+    emitirCatalogoActualizado({ motivo: "producto_actualizado", producto_id: producto.id });
 
     return res.status(200).json({
       ok: true,
@@ -392,6 +396,7 @@ export const eliminarProducto = async (req, res) => {
     }
 
     await producto.destroy(); // Soft delete via deleted_at
+    emitirCatalogoActualizado({ motivo: "producto_eliminado", producto_id: id });
 
     return res.status(200).json({
       ok: true,
@@ -613,6 +618,8 @@ export const crearLibro = async (req, res) => {
       ],
     });
 
+    emitirCatalogoActualizado({ motivo: "libro_creado", libro_id: libroCompleto?.id });
+
     return res.status(201).json({ ok: true, mensaje: "Libro creado exitosamente", data: libroCompleto });
   } catch (error) {
     return res.status(500).json({ ok: false, error: error.message });
@@ -693,6 +700,8 @@ export const actualizarLibro = async (req, res) => {
       ],
     });
 
+    emitirCatalogoActualizado({ motivo: "libro_actualizado", libro_id: libroCompleto?.id });
+
     return res.status(200).json({
       ok: true,
       mensaje: "Información del libro actualizada exitosamente",
@@ -724,6 +733,7 @@ export const actualizarPortadaLibro = async (req, res) => {
     const uploadRes = await subirACloudinary(req.file.buffer);
     libro.portada_url = uploadRes.secure_url;
     await libro.save();
+    emitirCatalogoActualizado({ motivo: "portada_actualizada", libro_id: libro.id });
 
     return res.status(200).json({
       ok: true,
@@ -749,6 +759,7 @@ export const actualizarStock = async (req, res) => {
 
     producto.stock_disponible = parseInt(stock_disponible, 10);
     await producto.save();
+    emitirCatalogoActualizado({ motivo: "producto_actualizado", producto_id: producto.id });
 
     return res.status(200).json({ ok: true, mensaje: "Stock actualizado", data: producto });
   } catch (error) {
@@ -763,6 +774,7 @@ export const crearGenero = async (req, res) => {
     const { nombre, descripcion } = req.body;
     if (!nombre) return res.status(400).json({ ok: false, mensaje: "Nombre de género requerido" });
     const genero = await Generos.create({ nombre, descripcion });
+    emitirCatalogoActualizado({ motivo: "genero_creado" });
     return res.status(201).json({ ok: true, mensaje: "Género creado", data: genero });
   } catch (error) {
     return res.status(500).json({ ok: false, error: error.message });
@@ -774,6 +786,7 @@ export const crearEditorial = async (req, res) => {
     const { nombre, email_contacto, sitio_web } = req.body;
     if (!nombre) return res.status(400).json({ ok: false, mensaje: "Nombre de editorial requerido" });
     const editorial = await Editorial.create({ nombre, email_contacto, sitio_web });
+    emitirCatalogoActualizado({ motivo: "editorial_creada" });
     return res.status(201).json({ ok: true, mensaje: "Editorial creada", data: editorial });
   } catch (error) {
     return res.status(500).json({ ok: false, error: error.message });

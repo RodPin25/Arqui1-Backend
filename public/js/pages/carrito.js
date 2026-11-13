@@ -4,6 +4,7 @@
 import { h, mount, icon, money, autoresDe, toast, confirmar } from "../core/dom.js";
 import { iniciarPagina, actualizarContadorCarrito } from "../core/layout.js";
 import { carritoApi } from "../core/api.js";
+import { escucharEvento } from "../core/socket.js";
 import { portada, resumenCompra, cargando, errorEstado, vacio, titulo } from "../core/components.js";
 
 const pagina = iniciarPagina({ titulo: "Carrito", roles: ["minorista", "institucional"] });
@@ -107,4 +108,7 @@ async function cargar(conEstado = true) {
   }
 }
 
-if (pagina) cargar();
+if (pagina) {
+  cargar();
+  escucharEvento("carrito:actualizado", () => cargar());
+}

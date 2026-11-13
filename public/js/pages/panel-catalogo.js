@@ -3,6 +3,7 @@
 import { h, mount, icon, money, autoresDe, nombreCompleto, sinAcentos, modal, ocupado, toast, confirmar } from "../core/dom.js";
 import { iniciarPagina } from "../core/layout.js";
 import { catalogoApi } from "../core/api.js";
+import { escucharEvento } from "../core/socket.js";
 import { portada, cargando, errorEstado, titulo } from "../core/components.js";
 
 const pagina = iniciarPagina({ zona: "panel", titulo: "Gestión de catálogo", roles: ["admin"] });
@@ -439,8 +440,13 @@ async function cargar(conEstado = true) {
       zona);
     pintar();
   } catch (error) {
-    mount(main, errorEstado(error, cargar));
+    if (conEstado) mount(main, errorEstado(error, cargar));
   }
 }
 
-if (pagina) cargar();
+if (pagina) {
+  cargar();
+  escucharEvento("catalogo:actualizado", () => {
+    if (!document.querySelector(".modal-backdrop")) cargar(false);
+  });
+}

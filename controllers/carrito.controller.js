@@ -6,6 +6,7 @@ import {
   Formatos,
   Autores,
 } from "../models/index.js";
+import { emitirCarritoActualizado } from "../services/socket.service.js";
 
 /**
  * Obtener o inicializar el carrito del usuario autenticado
@@ -146,6 +147,8 @@ export const agregarAlCarrito = async (req, res) => {
       });
     }
 
+    emitirCarritoActualizado(usuarioId, { motivo: "item_agregado" });
+
     return res.status(200).json({
       ok: true,
       mensaje: "Producto añadido al carrito",
@@ -198,6 +201,8 @@ export const actualizarCantidadItem = async (req, res) => {
     item.cantidad = cantNum;
     await item.save();
 
+    emitirCarritoActualizado(usuarioId, { motivo: "cantidad_actualizada" });
+
     return res.status(200).json({
       ok: true,
       mensaje: "Cantidad actualizada",
@@ -229,6 +234,8 @@ export const eliminarItemCarrito = async (req, res) => {
       return res.status(404).json({ ok: false, mensaje: "Ítem no encontrado en el carrito" });
     }
 
+    emitirCarritoActualizado(usuarioId, { motivo: "item_eliminado" });
+
     return res.status(200).json({
       ok: true,
       mensaje: "Ítem eliminado del carrito",
@@ -251,6 +258,8 @@ export const vaciarCarrito = async (req, res) => {
     const carrito = await obtenerOCrearCarrito(usuarioId);
 
     await CarritoItem.destroy({ where: { carrito_id: carrito.id } });
+
+    emitirCarritoActualizado(usuarioId, { motivo: "carrito_vaciado" });
 
     return res.status(200).json({
       ok: true,

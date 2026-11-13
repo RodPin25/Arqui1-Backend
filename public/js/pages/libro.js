@@ -3,6 +3,7 @@
 import { h, mount, icon, money, params, autoresDe, toast } from "../core/dom.js";
 import { iniciarPagina } from "../core/layout.js";
 import { catalogoApi } from "../core/api.js";
+import { escucharEvento } from "../core/socket.js";
 import { portada, insignia, cargando, errorEstado, vacio } from "../core/components.js";
 import { agregarAlCarrito } from "./compartido.js";
 
@@ -86,4 +87,7 @@ async function cargar() {
 
 const fila = (etiqueta, valor) => h("tr", {}, h("th", {}, etiqueta), h("td", {}, valor ?? "No registrado"));
 
-if (pagina) cargar();
+if (pagina) {
+  cargar();
+  escucharEvento("catalogo:actualizado", () => cargar(), { permitirAnonimo: true });
+}

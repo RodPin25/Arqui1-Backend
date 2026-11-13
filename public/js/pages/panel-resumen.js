@@ -67,6 +67,15 @@ const atajo = (href, tono, ic, texto, sub) =>
 
 if (pagina) {
   cargar();
-  escucharEvento("cotizacion:nueva", () => cargar({ silencioso: true }));
-  escucharEvento("cotizacion:actualizada", () => cargar({ silencioso: true }));
+  [
+    "cotizacion:nueva",
+    "cotizacion:actualizada",
+    "orden:nueva",
+    "orden:actualizada",
+    "institucion:nueva",
+    "institucion:actualizada",
+    "catalogo:actualizado",
+    "reporte:actualizado",
+    "reporte:nueva_venta",
+  ].forEach((ev) => escucharEvento(ev, () => cargar({ silencioso: true })));
 }

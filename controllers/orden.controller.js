@@ -24,6 +24,10 @@ import {
   emitirCheckoutCompletado,
   emitirCheckoutCancelado,
   emitirNuevaVenta,
+  emitirNuevaOrden,
+  emitirActualizacionOrden,
+  emitirCatalogoActualizado,
+  emitirCarritoActualizado,
 } from "../services/socket.service.js";
 import { refrescarReporteriaEnVivo } from "./reportes.controller.js";
 
@@ -624,6 +628,9 @@ export const crearOrden = async (req, res) => {
     // 4. NOTIFICACIONES EN VIVO POR WEBSOCKET
     // =========================================================================
     emitirCheckoutCompletado(usuarioId, ordenCompleta);
+    emitirNuevaOrden(ordenCompleta);
+    emitirCatalogoActualizado({ motivo: "venta" });
+    emitirCarritoActualizado(usuarioId, { motivo: "orden_creada" });
     emitirNuevaVenta({
       numero_orden: ordenCompleta.numero_orden,
       total_final: ordenCompleta.total_final,
@@ -824,6 +831,8 @@ export const actualizarEstadoOrden = async (req, res) => {
 
     orden.estado = estado;
     await orden.save();
+
+    emitirActualizacionOrden(orden);
 
     // Actualizar reportería en vivo tras cambio de estado
     refrescarReporteriaEnVivo().catch(() => {});

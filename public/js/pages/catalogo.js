@@ -4,6 +4,7 @@
 import { h, mount, icon, money, debounce, params } from "../core/dom.js";
 import { iniciarPagina } from "../core/layout.js";
 import { catalogoApi } from "../core/api.js";
+import { escucharEvento } from "../core/socket.js";
 import { tarjetaLibro, cargando, errorEstado, vacio, titulo, paginacion } from "../core/components.js";
 import { agregarAlCarrito } from "./compartido.js";
 
@@ -153,4 +154,7 @@ async function cargar() {
   }
 }
 
-if (pagina) cargar();
+if (pagina) {
+  cargar();
+  escucharEvento("catalogo:actualizado", () => buscar(), { permitirAnonimo: true });
+}

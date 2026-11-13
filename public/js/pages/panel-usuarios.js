@@ -3,6 +3,7 @@
 import { h, mount, icon, nombreCompleto, iniciales, sinAcentos, toast, confirmar } from "../core/dom.js";
 import { iniciarPagina } from "../core/layout.js";
 import { authApi } from "../core/api.js";
+import { escucharEvento } from "../core/socket.js";
 import { usuario } from "../core/session.js";
 import { insignia, cargando, errorEstado, titulo } from "../core/components.js";
 
@@ -102,8 +103,13 @@ async function cargar(conEstado = true) {
       h("div", {}, h("b", {}, cuenta((u) => /ASESOR|ADMIN/.test(u.rol?.nombre || ""))), h("span", {}, "Personal interno")));
     pintar();
   } catch (error) {
-    mount(main, errorEstado(error, cargar));
+    if (conEstado) mount(main, errorEstado(error, cargar));
   }
 }
 
-if (pagina) cargar();
+if (pagina) {
+  cargar();
+  ["usuario:nuevo", "usuario:actualizado", "institucion:nueva", "institucion:actualizada"].forEach((ev) =>
+    escucharEvento(ev, () => cargar(false))
+  );
+}

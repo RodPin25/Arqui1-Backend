@@ -4,6 +4,7 @@
 import { h, icon, mount, iniciales, nombreCompleto } from "./dom.js";
 import { rolDe, usuario, cerrarSesion, irALogin, esCliente, NOMBRE_ROL, inicioDe } from "./session.js";
 import { authApi, carritoApi } from "./api.js";
+import { escucharEvento } from "./socket.js";
 import { errorEstado } from "./components.js";
 
 const NAV_TIENDA = {
@@ -189,7 +190,10 @@ export function iniciarPagina({ zona = "tienda", roles, completa = false, titulo
     mount(app, saltar, barraLateral(rol), main);
   } else {
     mount(app, saltar, encabezadoTienda(rol, u), main, piePagina());
-    if (esCliente(rol)) actualizarContadorCarrito();
+    if (esCliente(rol)) {
+      actualizarContadorCarrito();
+      escucharEvento("carrito:actualizado", () => actualizarContadorCarrito());
+    }
   }
 
   if (roles && !roles.includes(rol)) {
@@ -197,15 +201,19 @@ export function iniciarPagina({ zona = "tienda", roles, completa = false, titulo
     return null;
   }
 
-  if (rol === "institucional" && zona === "tienda") avisoVerificacion(main);
+  if (rol === "institucional" && zona === "tienda") {
+    avisoVerificacion(main);
+    escucharEvento("institucion:actualizada", () => avisoVerificacion(main));
+  }
   return { main, rol, usuario: u };
 }
 
 async function avisoVerificacion(main) {
   try {
     const estado = (await authApi.yo()).data?.perfil_institucional?.estado_verificacion;
+    main.querySelector(".alert.warning[data-aviso-verificacion]")?.remove();
     if (estado && estado !== "verificado") {
-      main.prepend(h("div", { class: "alert warning" }, icon("info"),
+      main.prepend(h("div", { class: "alert warning", "data-aviso-verificacion": "1" }, icon("info"),
         h("span", {}, estado === "rechazado"
           ? "La validación de tu institución fue rechazada. Escríbenos a ventas@libronet.com para revisarla."
           : "Tu cuenta institucional está pendiente de validación. Un asesor la revisará en un máximo de 2 días hábiles.")));

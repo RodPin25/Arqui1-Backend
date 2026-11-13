@@ -3,6 +3,7 @@
 import { h, mount, icon, money, fecha, nombreCompleto, sinAcentos, modal, ocupado, toast, params } from "../core/dom.js";
 import { iniciarPagina } from "../core/layout.js";
 import { ordenesApi } from "../core/api.js";
+import { escucharEvento } from "../core/socket.js";
 import { insignia, cargando, errorEstado, titulo } from "../core/components.js";
 import { detalleOrden, ESTADOS_ORDEN } from "./orden-detalle.js";
 
@@ -76,4 +77,14 @@ async function cargar(conEstado = true) {
   }
 }
 
-if (pagina) cargar();
+if (pagina) {
+  cargar();
+  escucharEvento("orden:nueva", (payload) => {
+    const num = payload?.orden?.numero_orden;
+    toast(num ? `Nueva orden recibida: ${num}` : "Nueva orden recibida");
+    cargar(false);
+  });
+  escucharEvento("orden:actualizada", () => {
+    if (!document.querySelector(".modal-backdrop")) cargar(false);
+  });
+}

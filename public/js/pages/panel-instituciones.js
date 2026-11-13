@@ -3,6 +3,7 @@
 import { h, mount, icon, nombreCompleto, fecha, ocupado, toast, confirmar } from "../core/dom.js";
 import { iniciarPagina } from "../core/layout.js";
 import { authApi } from "../core/api.js";
+import { escucharEvento } from "../core/socket.js";
 import { insignia, cargando, errorEstado, titulo, vacio } from "../core/components.js";
 
 const pagina = iniciarPagina({ zona: "panel", titulo: "Instituciones", roles: ["asesor", "admin"] });
@@ -24,9 +25,9 @@ async function decidir(perfil, nuevo, boton) {
   });
 }
 
-async function cargar() {
+async function cargar({ silencioso = false } = {}) {
   const { main } = pagina;
-  mount(main, cargando());
+  if (!silencioso) mount(main, cargando());
   try {
     const perfiles = (await authApi.institucionales(estado)).data;
     mount(main,
@@ -51,8 +52,16 @@ async function cargar() {
         : vacio({ titulo: estado === "pendiente" ? "No hay instituciones por validar" : "No hay instituciones en esta lista", iconName: "shield",
             texto: estado === "pendiente" ? "Cuando una institución se registre, aparecerá aquí." : "" }));
   } catch (error) {
-    mount(main, errorEstado(error, cargar));
+    if (!silencioso) mount(main, errorEstado(error, cargar));
   }
 }
 
-if (pagina) cargar();
+if (pagina) {
+  cargar();
+  escucharEvento("institucion:nueva", (payload) => {
+    const nombre = payload?.perfil?.razon_social;
+    toast(nombre ? `Nueva institución por validar: ${nombre}` : "Nueva institución registrada");
+    cargar({ silencioso: true });
+  });
+  escucharEvento("institucion:actualizada", () => cargar({ silencioso: true }));
+}

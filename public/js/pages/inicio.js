@@ -3,6 +3,7 @@
 import { h, mount, icon, toast } from "../core/dom.js";
 import { iniciarPagina } from "../core/layout.js";
 import { catalogoApi } from "../core/api.js";
+import { escucharEvento } from "../core/socket.js";
 import { estante, tarjetaLibro, cargando, errorEstado } from "../core/components.js";
 import { FRASES } from "../core/frases.js";
 import { agregarAlCarrito } from "./compartido.js";
@@ -110,4 +111,7 @@ async function cargar() {
   }
 }
 
-if (pagina) cargar();
+if (pagina) {
+  cargar();
+  escucharEvento("catalogo:actualizado", () => cargar(), { permitirAnonimo: true });
+}

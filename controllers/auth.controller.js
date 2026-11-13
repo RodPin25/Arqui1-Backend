@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { Usuario, Rol, Carritos, PerfilInstitucional } from "../models/index.js";
+import { emitirInstitucion, emitirUsuario } from "../services/socket.service.js";
 
 // Helper para generar tokens JWT
 const generarTokens = (usuario) => {
@@ -131,6 +132,11 @@ export const registrar = async (req, res) => {
 
     // Generar tokens
     const tokens = generarTokens(usuarioCompleto);
+
+    emitirUsuario(usuarioCompleto, "usuario:nuevo");
+    if (usuarioCompleto.perfil_institucional) {
+      emitirInstitucion(usuarioCompleto.perfil_institucional, "institucion:nueva");
+    }
 
     return res.status(201).json({
       ok: true,
@@ -361,6 +367,8 @@ export const actualizarUsuario = async (req, res) => {
       attributes: { exclude: ["password_hash"] },
     });
 
+    emitirUsuario(actualizado, "usuario:actualizado");
+
     return res.status(200).json({
       ok: true,
       mensaje: "Usuario actualizado correctamente",
@@ -432,6 +440,8 @@ export const verificarPerfilInstitucional = async (req, res) => {
 
     perfil.estado_verificacion = estado_verificacion;
     await perfil.save();
+
+    emitirInstitucion(perfil, "institucion:actualizada");
 
     return res.status(200).json({
       ok: true,

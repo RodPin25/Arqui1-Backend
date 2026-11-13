@@ -24,12 +24,12 @@ function cargarScriptSocketIO() {
 /**
  * Devuelve la conexión Socket.IO autenticada (o null si no hay sesión o falla la carga).
  */
-export async function conectarSocket() {
+export async function conectarSocket({ permitirAnonimo = false } = {}) {
   const token = accessToken();
-  if (!token) return null;
+  if (!token && !permitirAnonimo) return null;
 
   if (socketInstancia) {
-    socketInstancia.auth = { token };
+    socketInstancia.auth = token ? { token } : {};
     if (socketInstancia.disconnected) socketInstancia.connect();
     return socketInstancia;
   }
@@ -37,12 +37,12 @@ export async function conectarSocket() {
   try {
     const io = await cargarScriptSocketIO();
     socketInstancia = io({
-      auth: { token },
+      auth: token ? { token } : {},
       transports: ["websocket", "polling"],
     });
     socketInstancia.io.on("reconnect_attempt", () => {
       const actual = accessToken();
-      if (actual) socketInstancia.auth = { token: actual };
+      socketInstancia.auth = actual ? { token: actual } : {};
     });
     return socketInstancia;
   } catch {
@@ -53,8 +53,8 @@ export async function conectarSocket() {
 /**
  * Suscribe un listener a un evento WebSocket. Devuelve una función para cancelar la suscripción.
  */
-export async function escucharEvento(evento, manejador) {
-  const socket = await conectarSocket();
+export async function escucharEvento(evento, manejador, opciones) {
+  const socket = await conectarSocket(opciones);
   if (!socket) return () => {};
   socket.on(evento, manejador);
   return () => socket.off(evento, manejador);

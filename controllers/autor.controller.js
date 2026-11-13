@@ -1,5 +1,6 @@
 import { Op } from "sequelize";
 import { Autores, Libros } from "../models/index.js";
+import { emitirCatalogoActualizado } from "../services/socket.service.js";
 
 /**
  * RF-05.1: Listar autores con soporte para búsqueda y conteo de obras asociadas
@@ -119,6 +120,8 @@ export const crearAutor = async (req, res) => {
       biografia: biografia ? biografia.trim() : null,
     });
 
+    emitirCatalogoActualizado({ motivo: "autor_creado" });
+
     return res.status(201).json({
       ok: true,
       mensaje: "Autor registrado exitosamente",
@@ -170,6 +173,7 @@ export const actualizarAutor = async (req, res) => {
     }
 
     await autor.save();
+    emitirCatalogoActualizado({ motivo: "autor_actualizado" });
 
     return res.status(200).json({
       ok: true,
@@ -207,6 +211,7 @@ export const eliminarAutor = async (req, res) => {
 
     // Eliminación lógica permitida por paranoid: true
     await autor.destroy();
+    emitirCatalogoActualizado({ motivo: "autor_eliminado" });
 
     return res.status(200).json({
       ok: true,

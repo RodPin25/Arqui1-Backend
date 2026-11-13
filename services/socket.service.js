@@ -4,7 +4,9 @@ import jwt from "jsonwebtoken";
 let io = null;
 
 const ROLES_BANDEJA = new Set(["ADMIN", "ADMINISTRADOR", "ASESOR", "ASESOR_VENTAS"]);
+const ROLES_ADMIN = new Set(["ADMIN", "ADMINISTRADOR"]);
 const esAsesorOAdmin = (rol) => ROLES_BANDEJA.has(String(rol || "").toUpperCase());
+const esAdmin = (rol) => ROLES_ADMIN.has(String(rol || "").toUpperCase());
 
 /**
  * Inicializa el servidor WebSocket adjunto al servidor HTTP
@@ -50,6 +52,11 @@ export const initSocketServer = (httpServer) => {
       socket.join(`checkout:${socket.usuario.id}`);
       if (esAsesorOAdmin(socket.usuario.rol)) {
         socket.join("cotizaciones:bandeja");
+        socket.join("panel:comercial");
+      }
+      if (esAdmin(socket.usuario.rol)) {
+        socket.join("panel:admin");
+        socket.join("reporteria");
       }
     }
 
@@ -221,4 +228,73 @@ export const emitirActualizacionCotizacion = (solicitud, tipo = "actualizada") =
   if (solicitud.cliente_id) {
     io.to(`usuario:${solicitud.cliente_id}`).emit("cotizacion:actualizada", payload);
   }
+};
+
+/**
+ * Emite una nueva orden al panel comercial y al cliente dueño
+ */
+export const emitirNuevaOrden = (orden) => {
+  if (!io || !orden) return;
+  const payload = { ok: true, orden, timestamp: Date.now() };
+  io.to("panel:comercial").emit("orden:nueva", payload);
+  if (orden.usuario_id) {
+    io.to(`usuario:${orden.usuario_id}`).emit("orden:nueva", payload);
+  }
+};
+
+/**
+ * Emite actualización de estado de una orden al panel comercial y al cliente dueño
+ */
+export const emitirActualizacionOrden = (orden) => {
+  if (!io || !orden) return;
+  const payload = { ok: true, orden, timestamp: Date.now() };
+  io.to("panel:comercial").emit("orden:actualizada", payload);
+  if (orden.usuario_id) {
+    io.to(`usuario:${orden.usuario_id}`).emit("orden:actualizada", payload);
+  }
+};
+
+/**
+ * Emite creación o validación de un perfil institucional
+ */
+export const emitirInstitucion = (perfil, evento = "institucion:actualizada") => {
+  if (!io || !perfil) return;
+  const payload = { ok: true, perfil, timestamp: Date.now() };
+  io.to("panel:comercial").emit(evento, payload);
+  if (perfil.usuario_id) {
+    io.to(`usuario:${perfil.usuario_id}`).emit(evento, payload);
+  }
+};
+
+/**
+ * Emite creación o actualización de usuario al panel de administración (y al propio usuario)
+ */
+export const emitirUsuario = (usuario, evento = "usuario:actualizado") => {
+  if (!io || !usuario) return;
+  const payload = { ok: true, usuario, timestamp: Date.now() };
+  io.to("panel:admin").emit(evento, payload);
+  if (usuario.id && evento === "usuario:actualizado") {
+    io.to(`usuario:${usuario.id}`).emit(evento, payload);
+  }
+};
+
+/**
+ * Emite cambios en el catálogo o inventario a todos los clientes conectados
+ */
+export const emitirCatalogoActualizado = (detalle = {}) => {
+  if (!io) return;
+  io.emit("catalogo:actualizado", { ok: true, ...detalle, timestamp: Date.now() });
+};
+
+/**
+ * Emite cambios en el carrito a las pestañas activas del usuario
+ */
+export const emitirCarritoActualizado = (usuarioId, detalle = {}) => {
+  if (!io || !usuarioId) return;
+  io.to(`usuario:${usuarioId}`).emit("carrito:actualizado", {
+    ok: true,
+    usuario_id: usuarioId,
+    ...detalle,
+    timestamp: Date.now(),
+  });
 };

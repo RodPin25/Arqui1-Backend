@@ -1,8 +1,9 @@
 // Historial de pedidos del cliente (RF-02, cliente minorista e institucional).
 
-import { h, mount, icon, money, fecha, sinAcentos, modal } from "../core/dom.js";
+import { h, mount, icon, money, fecha, sinAcentos, modal, toast } from "../core/dom.js";
 import { iniciarPagina } from "../core/layout.js";
 import { ordenesApi } from "../core/api.js";
+import { escucharEvento } from "../core/socket.js";
 import { insignia, cargando, errorEstado, vacio, titulo } from "../core/components.js";
 import { detalleOrden, ESTADOS_ORDEN } from "./orden-detalle.js";
 
@@ -35,9 +36,9 @@ function pintarTabla() {
           : h("tr", {}, h("td", { colspan: "6", class: "table-empty" }, "No hay pedidos con esos filtros.")))));
 }
 
-async function cargar() {
+async function cargar({ silencioso = false } = {}) {
   const { main } = pagina;
-  mount(main, cargando());
+  if (!silencioso) mount(main, cargando());
   try {
     ordenes = (await ordenesApi.mias()).data;
     if (!ordenes.length) {
@@ -51,14 +52,24 @@ async function cargar() {
       titulo({ titulo: "Historial de pedidos", texto: "Consulta el estado y el desglose de cada compra." }),
       h("div", { class: "table-toolbar" },
         h("label", { class: "small-search" }, icon("search", 17),
-          h("input", { type: "search", placeholder: "Buscar por número de orden", "aria-label": "Buscar orden", oninput: (e) => { filtro.q = e.target.value; pintarTabla(); } })),
+          h("input", { type: "search", value: filtro.q, placeholder: "Buscar por número de orden", "aria-label": "Buscar orden", oninput: (e) => { filtro.q = e.target.value; pintarTabla(); } })),
         h("select", { "aria-label": "Filtrar por estado", onchange: (e) => { filtro.estado = e.target.value; pintarTabla(); } },
-          h("option", { value: "" }, "Todos los estados"), ESTADOS_ORDEN.map((e) => h("option", {}, e)))),
+          h("option", { value: "" }, "Todos los estados"), ESTADOS_ORDEN.map((e) => h("option", { selected: e === filtro.estado }, e)))),
       tabla);
     pintarTabla();
   } catch (error) {
-    mount(main, errorEstado(error, cargar));
+    if (!silencioso) mount(main, errorEstado(error, cargar));
   }
 }
 
-if (pagina) cargar();
+if (pagina) {
+  cargar();
+  escucharEvento("orden:nueva", () => cargar({ silencioso: true }));
+  escucharEvento("orden:actualizada", (payload) => {
+    const o = payload?.orden;
+    if (o?.numero_orden && o?.estado) {
+      toast(`Tu orden ${o.numero_orden} cambió a: ${o.estado}`);
+    }
+    cargar({ silencioso: true });
+  });
+}

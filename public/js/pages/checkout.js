@@ -3,6 +3,7 @@
 import { h, mount, icon, money, autoresDe, nombreCompleto, fecha, ocupado, toast } from "../core/dom.js";
 import { iniciarPagina, actualizarContadorCarrito } from "../core/layout.js";
 import { carritoApi, ordenesApi, authApi } from "../core/api.js";
+import { escucharEvento } from "../core/socket.js";
 import { portada, resumenCompra, insignia, cargando, errorEstado, vacio, titulo } from "../core/components.js";
 
 const pagina = iniciarPagina({ titulo: "Finalizar compra", roles: ["minorista", "institucional"] });
@@ -101,4 +102,16 @@ async function cargar() {
   }
 }
 
-if (pagina) cargar();
+if (pagina) {
+  cargar();
+  escucharEvento("checkout:expirado", (payload) => {
+    toast(payload?.mensaje || "La sesión de checkout expiró", { error: true });
+    location.href = "/catalogo.html";
+  });
+  escucharEvento("checkout:cancelado", () => {
+    location.href = "/catalogo.html";
+  });
+  escucharEvento("carrito:actualizado", () => {
+    if (!document.querySelector(".confirmation")) cargar();
+  });
+}
