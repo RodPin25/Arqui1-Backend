@@ -48,23 +48,23 @@
 {\footnotesize \textsuperscript{*}Proyecto de Cátedra -- Hackathon de Arquitectura de Sistemas}}
 
 \author{
-    \IEEEauthorblockN{Nombre del Integrante 1}
+    \IEEEauthorblockN{Marcos Josué García Maldonado}
     \IEEEauthorblockA{\textit{Facultad de Ingeniería} \\
-    \textit{[NOMBRE DE LA UNIVERSIDAD]}\\
+    \textit{Universidad Mesoamericana}\\
     Carné: 0000-00-0000 \\
     correo1@universidad.edu}
     \and
-    \IEEEauthorblockN{Nombre del Integrante 2}
+    \IEEEauthorblockN{Arturo Alejandro Maldonado Orozco}
     \IEEEauthorblockA{\textit{Facultad de Ingeniería} \\
-    \textit{[NOMBRE DE LA UNIVERSIDAD]}\\
-    Carné: 0000-00-0000 \\
-    correo2@universidad.edu}
+    \textit{Universidad Mesoamericana}\\
+    Carné: 2023080110 \\
+    20arturomaldonado@umes.edu.gt}
     \and
-    \IEEEauthorblockN{Nombre del Integrante 3}
+    \IEEEauthorblockN{Sebastián Rodrigo Rodas Pineda}
     \IEEEauthorblockA{\textit{Facultad de Ingeniería} \\
-    \textit{[NOMBRE DE LA UNIVERSIDAD]}\\
-    Carné: 0000-00-0000 \\
-    correo3@universidad.edu}
+    \textit{Universidad Mesoamericana}\\
+    Carné: 202408060 \\
+    srodas477@umes.edu.gt}
 }
 
 \maketitle
@@ -107,7 +107,7 @@ Para salvaguardar los principios de alta cohesión y bajo acoplamiento, la plata
 \subsection{Topología Arquitectónica}
 La Fig.~\ref{fig:arquitectura} ilustra el flujo de comunicación y el desacoplamiento entre las capas de la plataforma:
 
-\begin{figure}[htbp]
+\begin{figure*}[!t]
 \centering
 \begin{verbatim}
 +-------------------------------------------------------+
@@ -148,7 +148,7 @@ La Fig.~\ref{fig:arquitectura} ilustra el flujo de comunicación y el desacoplam
 \end{verbatim}
 \caption{Diagrama de Arquitectura Multicapa del Sistema Editorial.}
 \label{fig:arquitectura}
-\end{figure}
+\end{figure*}
 
 % =========================================================================
 % III. DISEÑO Y MODELO DE BASE DE DATOS
@@ -228,17 +228,21 @@ La Tabla~\ref{tab:descuentos} resume los escenarios de prueba ejecutados para co
 \caption{Matriz de Liquidación y Descuentos Dinámicos}
 \label{tab:descuentos}
 \centering
-\begin{tabularx}{\linewidth}{lcccc}
+\setlength{\tabcolsep}{3pt}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{lcccc}
 \toprule
 \textbf{Escenario} & \textbf{Unidades} & \textbf{\% Vol.} & \textbf{\% Inst.} & \textbf{Total Final (Q)} \\
 \midrule
-Minorista Individual & 2 & 0\% & 0\% & Base + IVA \\
-Minorista Mediano    & 10 & 5\% & 0\% & Base - 5\% + IVA \\
-Institucional Básico & 4 & 0\% & 8\% & Base - 8\% + IVA \\
-Institucional Medio  & 15 & 5\% & 8\% acum. & Descuento Mixto \\
-Institucional Masivo & 60 & 15\% & 8\% acum. & Beneficio Máximo \\
+Minorista Individual & 2  & 0\%  & 0\%        & Base + IVA \\
+Minorista Mediano    & 10 & 5\%  & 0\%        & Base - 5\% + IVA \\
+Institucional Básico & 4  & 0\%  & 8\%        & Base - 8\% + IVA \\
+Institucional Medio  & 15 & 5\%  & 8\% acum.  & Descuento Mixto \\
+Institucional Masivo & 60 & 15\% & 8\% acum.  & Beneficio Máximo \\
 \bottomrule
-\end{tabularx}
+\end{tabular}%
+}
+\vspace{1ex}
 \end{table}
 
 % =========================================================================
