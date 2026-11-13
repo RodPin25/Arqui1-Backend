@@ -102,6 +102,49 @@ function errorDePortada(error) {
   return error;
 }
 
+function campoAutor() {
+  const lista = `autores-${++selectores}`;
+  const input = h("input", { list: lista, required: true, minlength: "3", maxlength: "150", placeholder: "Escribe o elige un autor", autocomplete: "off" });
+  const opciones = h("datalist", { id: lista }, datos.autores.map((a) => h("option", { value: nombreCompleto(a) })));
+  const nota = h("small", { class: "field-hint", "aria-live": "polite" });
+  const nombres = h("input", { maxlength: "150", "aria-label": "Nombres del autor nuevo" });
+  const apellidos = h("input", { maxlength: "150", "aria-label": "Apellidos del autor nuevo" });
+  const nuevo = h("div", { class: "author-new", hidden: true }, campo("Nombres", nombres), campo("Apellidos", apellidos));
+
+  const existente = () => datos.autores.find((a) => sinAcentos(nombreCompleto(a)) === sinAcentos(input.value.trim()));
+  const revisar = () => {
+    const texto = input.value.trim().replace(/\s+/g, " ");
+    const esNuevo = texto.length >= 3 && !existente();
+    nota.textContent = !texto ? "" : esNuevo ? "Autor nuevo: revisa nombres y apellidos; se agregará al guardar." : "Autor del catálogo.";
+    nuevo.hidden = !esNuevo;
+    nombres.required = apellidos.required = esNuevo;
+    if (esNuevo) {
+      // Propuesta: con 4 palabras o más, las dos últimas son apellidos; si no, la última.
+      const partes = texto.split(" ");
+      const corte = partes.length >= 4 ? partes.length - 2 : Math.max(1, partes.length - 1);
+      nombres.value = partes.slice(0, corte).join(" ");
+      apellidos.value = partes.slice(corte).join(" ");
+    }
+  };
+  const el = h("div", { class: "field" },
+    h("label", { class: "field", style: { marginBottom: "0" } }, "Autor", input),
+    opciones, nota, nuevo);
+  input.addEventListener("input", () => { revisar(); el.classList.toggle("wide", !nuevo.hidden); });
+  input.addEventListener("change", () => { revisar(); el.classList.toggle("wide", !nuevo.hidden); });
+
+  return {
+    el,
+    /** Devuelve el id del autor; si es nuevo, primero lo crea en el catálogo. */
+    async resolver() {
+      const encontrado = existente();
+      if (encontrado) return encontrado.id;
+      const creado = (await catalogoApi.crearAutor({ nombres: nombres.value.trim(), apellidos: apellidos.value.trim() })).data;
+      datos.autores.push(creado);
+      return creado.id;
+    },
+  };
+}
+
 function editarProducto(p) {
   const precio = h("input", { type: "number", min: "0.01", step: "0.01", required: true, value: p.precio_base });
   const stock = h("input", { type: "number", min: "0", step: "1", required: true, value: p.stock_disponible });
@@ -155,7 +198,7 @@ function nuevoProducto() {
   const anio = h("input", { type: "number", min: "1450", max: String(new Date().getFullYear() + 1), required: true, value: String(new Date().getFullYear()) });
   const sinopsis = h("textarea", { required: true, minlength: "10", maxlength: "2000", placeholder: "De qué trata el libro, en dos o tres frases." });
   const selector = selectorPortada({ id: 0, titulo: "" });
-  const autorSel = h("select", { required: true }, h("option", { value: "" }, "Elige un autor"), datos.autores.map((a) => h("option", { value: a.id }, nombreCompleto(a))));
+  const autor = campoAutor();
   const generoSel = h("select", { required: true }, h("option", { value: "" }, "Elige un género"), datos.generos.map((g) => h("option", { value: g.id }, g.nombre)));
   const editorialSel = h("select", { required: true }, h("option", { value: "" }, "Elige una editorial"), datos.editoriales.map((e) => h("option", { value: e.id }, e.nombre)));
   const formato = h("select", { required: true });
@@ -183,7 +226,7 @@ function nuevoProducto() {
     modo === "existente"
       ? campo("Libro", libroSel)
       : h("div", { class: "form-grid" },
-          campo("Título", tituloIn, true), campo("Autor", autorSel), campo("Género", generoSel), campo("Editorial", editorialSel), campo("Año de edición", anio),
+          campo("Título", tituloIn, true),  autor.el, campo("Género", generoSel), campo("Editorial", editorialSel), campo("Año de edición", anio),
           h("div", { class: "field wide" }, selector.el), campo("Sinopsis", sinopsis, true)),
     h("div", { class: "form-grid" }, campo("Formato", formato), campo("ISBN", isbn), campo("Precio base (Q)", precio), campo("Stock inicial", stock)),
     boton); };
@@ -198,7 +241,7 @@ function nuevoProducto() {
       if (modo === "existente") cuerpoApi.libro_id = libroSel.value;
       else cuerpoApi.libroNuevo = {
         titulo: tituloIn.value.trim(), sinopsis: sinopsis.value.trim(), anio_edicion: Number(anio.value),
-        portada_url: selector.enlace() || null, autores_ids: [autorSel.value], generos_ids: [generoSel.value], editorial_id: editorialSel.value,
+        portada_url: selector.enlace() || null, autores_ids: [], generos_ids: [generoSel.value], editorial_id: editorialSel.value,
       };
   const texto = boton.textContent;
          ocupado(boton, async () => {
@@ -239,6 +282,11 @@ function nuevoRegistro(tipo) {
       e.preventDefault();
       if (!validarFormulario(e.currentTarget)) return;
       ocupado(boton, async () => {
+             // Si el autor es nuevo, se registra antes de crear el libro.
+        if (modo === "nuevo") {
+          boton.textContent = "Guardando autor…";
+          cuerpoApi.libroNuevo.autores_ids = [await autor.resolver()];
+        }
         try {
           await config.crear(Object.fromEntries(Object.entries(controles).map(([k, c]) => [k, c.value.trim() || null])));
           toast(config.aviso);

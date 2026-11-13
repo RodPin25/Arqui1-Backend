@@ -3852,3 +3852,24 @@ input[role="switch"]:checked::after {
     width: 64px;
   }
 }
+
+
+/* Autor del libro nuevo: existente o escrito a mano */
+.field-hint {
+  color: var(--slate);
+  font-size: 0.8125rem;
+  font-weight: 400;
+}
+.author-new {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 12px;
+  margin-top: 6px;
+  padding: 12px 12px 0;
+  border: 1px dashed var(--line-strong);
+  border-radius: 8px;
+  background: var(--mist);
+}
+.author-new .field {
+  margin-bottom: 12px;
+}
