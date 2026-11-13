@@ -520,6 +520,19 @@ Documentación técnica interactiva de la **Plataforma Web Editorial Multicanal*
       },
     },
 
+    "/api/ordenes/{id}": {
+      get: {
+        tags: ["Órdenes y Checkout"],
+        summary: "Detalle completo de una orden por ID",
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer" } }],
+        responses: {
+          200: { description: "Detalle de orden con ítems, desglose de reglas y datos de entrega" },
+          404: { description: "Orden no encontrada" },
+        },
+      },
+    },
+
     // -------------------------------------------------------------
     // COTIZACIONES B2B
     // -------------------------------------------------------------
@@ -553,6 +566,17 @@ Documentación técnica interactiva de la **Plataforma Web Editorial Multicanal*
       },
     },
 
+    "/api/cotizaciones/mis-solicitudes": {
+      get: {
+        tags: ["Cotizaciones B2B"],
+        summary: "Historial de solicitudes de cotización del cliente institucional autenticado",
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: { description: "Listado de solicitudes con sus propuestas asociadas" },
+        },
+      },
+    },
+
     "/api/cotizaciones/bandeja": {
       get: {
         tags: ["Cotizaciones B2B"],
@@ -560,6 +584,18 @@ Documentación técnica interactiva de la **Plataforma Web Editorial Multicanal*
         security: [{ bearerAuth: [] }],
         responses: {
           200: { description: "Solicitudes de cotización para revisión comercial" },
+        },
+      },
+    },
+
+    "/api/cotizaciones/solicitudes/{id}/asignar": {
+      patch: {
+        tags: ["Cotizaciones B2B"],
+        summary: "Asignar solicitud de cotización al asesor autenticado (Asesor / Admin)",
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer" } }],
+        responses: {
+          200: { description: "Solicitud asignada exitosamente" },
         },
       },
     },

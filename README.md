@@ -65,28 +65,34 @@ El sistema implementa una estricta separación de responsabilidades bajo el patr
 ```text
 Backend/
 ├── config/
+│   ├── cloudinary.js           # SDK Cloudinary para subida y almacenamiento de portadas
 │   ├── db.js                   # Configuración del pool de conexiones Sequelize a PostgreSQL
-│   └── initDb.js               # Aseguramiento de roles iniciales del sistema
+│   ├── initDb.js               # Aseguramiento de roles iniciales del sistema
+│   └── swagger.js              # Especificación OpenAPI 3.0 / Swagger UI interactivo
 ├── controllers/
-│   ├── auth.controller.js      # Controlador de autenticación, perfiles y usuarios
-│   ├── carrito.controller.js   # Controlador del carrito de compras
-│   ├── catalogo.controller.js  # Controlador del catálogo bibliográfico y metadatos
-│   ├── cotizacion.controller.js# Controlador de solicitudes y propuestas comerciales B2B
-│   └── orden.controller.js     # Controlador de órdenes, idempotencia y temporizador de 10 min
+│   ├── auth.controller.js      # Autenticación, perfiles y gestión RBAC de usuarios
+│   ├── carrito.controller.js   # Gestión de carritos y consumo de lógica del Modelo
+│   ├── catalogo.controller.js  # Catálogo bibliográfico, búsqueda multifiltro y subida de portadas
+│   ├── cotizacion.controller.js# Solicitudes y propuestas comerciales B2B
+│   ├── orden.controller.js     # Checkout, sesiones de 10 min, idempotencia y confirmación
+│   └── reportes.controller.js  # Métricas financieras, reportería en tiempo real y dashboard
 ├── middlewares/
-│   └── auth.middleware.js      # Interceptores para JWT y autorización por roles (RBAC)
+│   ├── auth.middleware.js      # Interceptores para JWT y autorización por roles (RBAC)
+│   └── upload.middleware.js    # Multer en memoria para procesar imágenes hacia Cloudinary
 ├── models/
 │   ├── Autores.js              # Entidad de autores
 │   ├── Carrito_Items.js        # Ítems en el carrito de compras
 │   ├── Carritos.js             # Carrito + MOTOR DE DESCUENTOS EN EL MODELO
 │   ├── Catalogo_Productos.js   # Variantes por formato, stock y precio base
+│   ├── Checkout_Sesiones.js    # Sesiones de checkout persistidas (10 min, items JSONB, estado)
 │   ├── Cotizacion_Propuesta.js # Propuestas formales de cotización emitidas por asesores
 │   ├── Cotizacion_Solicitud.js # Solicitudes de pedidos especiales de clientes institucionales
 │   ├── Editoriales.js          # Entidad de casas editoriales
 │   ├── Formatos.js             # Formatos (Físico Tapa Blanda, Tapa Dura, E-Book, Audio)
 │   ├── Generos.js              # Géneros literarios
+│   ├── Idempotencias.js        # Persistencia dual de llaves de idempotencia y respuestas cacheadas
 │   ├── index.js                # Asociación de relaciones ORM y exportación centralizada
-│   ├── Libros.js               # Entidad principal de obras literarias
+│   ├── Libros.js               # Entidad principal de obras literarias (incluye portada_url)
 │   ├── Libros_Autores.js       # Tabla asociativa N:M libros-autores
 │   ├── Libros_Editoriales.js   # Tabla asociativa N:M libros-editoriales
 │   ├── Libros_Generos.js       # Tabla asociativa N:M libros-géneros
@@ -98,20 +104,23 @@ Backend/
 ├── routes/
 │   ├── auth.routes.js          # Rutas de autenticación y gestión de usuarios
 │   ├── carrito.routes.js       # Rutas del carrito de compras
-│   ├── catalogo.routes.js      # Rutas de productos, filtros y metadatos
-│   ├── cotizacion.routes.js    # Rutas de cotizaciones comerciales
-│   └── orden.routes.js         # Rutas de órdenes, inicio de checkout y confirmación
+│   ├── catalogo.routes.js      # Rutas de productos, filtros, metadatos y portadas
+│   ├── cotizacion.routes.js    # Rutas de cotizaciones comerciales B2B
+│   ├── orden.routes.js         # Rutas de órdenes, checkout de 10 minutos y confirmación
+│   └── reportes.routes.js      # Rutas del dashboard de reportería en tiempo real
+├── services/
+│   └── socket.service.js       # Servidor WebSockets (Socket.IO) para checkout y reportería
 ├── scripts/
 │   └── seed.js                 # Semilla con 12 libros y los 5 roles de usuario
 ├── utils/
-│   └── idempotencia.js         # Motor criptográfico de idempotencia (HMAC-SHA256)
+│   └── idempotencia.js         # Motor criptográfico de idempotencia (HMAC-SHA256) dual
 ├── .env                        # Variables de entorno locales
 ├── .env.example                # Plantilla de variables de entorno
-├── app.js                      # Configuración de Express y montaje de rutas modulares
+├── app.js                      # Configuración de Express, Swagger UI y rutas modulares
 ├── database.sql                # Entregable DDL + DML exportado para evaluación
 ├── package.json                # Dependencias y scripts de ejecución
 ├── REQUIREMENTS.md             # Guía oficial de requerimientos de la hackathon
-└── server.js                   # Punto de entrada y arranque del servidor HTTP
+└── server.js                   # Punto de entrada HTTP + WebSocket con auto-fallback de puertos
 ```
 
 ---
@@ -151,6 +160,11 @@ PORT=3000
 
 # Llave de Idempotencia para firma HMAC de transacciones de compra
 IDEMPOTENCY_KEY="QYCeYwdMlWq1Wf32NmfAxJgmh+U2AdkwMUfYcLNzw8rZHDs52GxYIw2keSVWJZR4VczwRLJz7WcP1CMJ06ovuw=="
+
+# Integración con Cloudinary (Almacenamiento en la nube de portadas de libros)
+CLOUD_NAME="tu_cloud_name"
+API_KEY="tu_api_key"
+API_SECRET="tu_api_secret"
 ```
 
 ### Paso 4: Poblar la Base de Datos con la Data Semilla
@@ -222,20 +236,25 @@ Cumpliendo con la restricción de diseño donde **la lógica de cálculo debe ej
 
 ## 6. Flujo de Ventas: Idempotencia y Limitador de Tiempo (10 Minutos)
 
-Para evitar duplicidad en transacciones y garantizar una experiencia de compra consistente:
+Para evitar duplicidad en transacciones y garantizar una experiencia de compra consistente en alta concurrencia:
 
-### Idempotencia con `IDEMPOTENCY_KEY`
+### Idempotencia con `IDEMPOTENCY_KEY` y Persistencia Dual
 - Se firma criptográficamente un token mediante **HMAC-SHA256** utilizando la variable de entorno `process.env.IDEMPOTENCY_KEY`.
-- Cuando el cliente confirma la compra enviando el encabezado `Idempotency-Key` o el campo `idempotency_key`, el backend valida si la orden ya fue procesada.
-- Si la petición se repite (doble clic o reintento de red), el backend devuelve inmediatamente la orden existente con la cabecera HTTP `X-Idempotency-Replay: true`, **sin duplicar la orden ni descontar stock dos veces**.
+- Soporta llaves de hasta 255 caracteres (`VARCHAR(255)`) tanto en `ordenes.idempotency_key` como en `idempotencias.idempotency_key` y `checkout_sesiones.idempotency_key`.
+- **Capa Dual de Replay:**
+  1. **Memoria RAM:** Respuesta instantánea para peticiones concurrentes inmediatas.
+  2. **Tabla `idempotencias` (PostgreSQL):** Persistencia relacional de respuestas completas en `cuerpo_respuesta (JSONB)`. Si el servidor se reinicia, el estado idempotente no se pierde.
+- Cuando el cliente confirma la compra enviando el encabezado `Idempotency-Key` o el campo `idempotency_key`, el backend valida si la orden ya fue procesada. Si se repite, devuelve inmediatamente la respuesta con la cabecera HTTP `X-Idempotency-Replay: true`, **sin duplicar cobros ni descontar stock dos veces**.
 
-### Limitador de Tiempo de 10 Minutos
-- Al pasar al checkout (`POST /api/ordenes/iniciar-checkout`), se activa un temporizador de **10 minutos exactos** (600 segundos).
-- Durante este lapso, el cliente puede consultar en tiempo real el tiempo restante (`GET /api/ordenes/checkout-sesion`).
+### Sesiones de Checkout Persistidas y Limitador de Tiempo (10 Minutos)
+- Al pasar al checkout (`POST /api/ordenes/iniciar-checkout`), se crea un registro en la tabla `checkout_sesiones` de PostgreSQL y se activa un temporizador de **10 minutos exactos** (600 segundos).
+- Se genera un `token_sesion` único junto con los ítems calculados en formato `JSONB`, vinculando el usuario y la fecha exacta de expiración (`expira_en`).
+- Durante este lapso, el cliente recibe ticks por WebSocket (`checkout:tick`) cada segundo o puede consultar el estado vía HTTP (`GET /api/ordenes/checkout-sesion`).
 - Si transcurren más de 10 minutos sin confirmar la compra:
-  - El backend invalida automáticamente la sesión devolviendo estado `410 Gone`.
-  - Se retorna el indicador `{ expiro: true, redirigir_tienda: true, ruta_redireccion: "/tienda" }`.
-  - El sistema devuelve al usuario automáticamente a la tienda para reiniciar el proceso.
+  - El backend actualiza la sesión a `estado = 'expirada'` en base de datos.
+  - Emite el evento WebSocket `checkout:expirado`.
+  - Responde con estado HTTP `410 Gone` y el payload `{ expiro: true, redirigir_tienda: true, ruta_redireccion: "/tienda" }`.
+- Al confirmar la compra (`POST /api/ordenes/confirmar-checkout`), la sesión en base de datos pasa a `estado = 'completada'` y queda enlazada a la orden definitiva mediante `orden_id`.
 
 ---
 
@@ -267,18 +286,22 @@ Para evitar duplicidad en transacciones y garantizar una experiencia de compra c
 - `DELETE /api/carrito` : Vaciar carrito.
 
 ### Órdenes y Checkout (`/api/ordenes`)
-- `POST /api/ordenes/iniciar-checkout` : Inicia sesión de 10 minutos y genera llave de idempotencia.
-- `GET /api/ordenes/checkout-sesion` : Consulta el temporizador de 10 minutos en tiempo real.
-- `POST /api/ordenes/cancelar-checkout` : Cancela la compra y retorna a la tienda.
-- `POST /api/ordenes/confirmar-checkout` : Cierre transaccional de orden con idempotencia y verificación de stock.
+- `POST /api/ordenes/iniciar-checkout` : Inicia sesión de 10 minutos (persistida en `checkout_sesiones`) y genera llave de idempotencia.
+- `GET /api/ordenes/checkout-sesion` : Consulta el temporizador de 10 minutos y estado de la sesión en tiempo real.
+- `POST /api/ordenes/cancelar-checkout` : Cancela la compra en BD y retorna a la tienda.
+- `POST /api/ordenes/confirmar-checkout` : Cierre transaccional de orden con idempotencia, vinculación a `checkout_sesiones` y verificación de stock.
 - `GET /api/ordenes/mis-ordenes` : Historial de pedidos del cliente autenticado.
+- `GET /api/ordenes/:id` : Detalle completo de orden por ID (con desglose de reglas e ítems).
 - `GET /api/ordenes` *(Admin/Asesor)* : Monitoreo de órdenes por estado (`Pendiente`, `Aprobado`, `Enviado`, `Cancelado`).
 - `PATCH /api/ordenes/:id/estado` *(Admin/Asesor)* : Actualización de estado de entrega.
 
 ### Cotizaciones B2B (`/api/cotizaciones`)
 - `POST /api/cotizaciones/solicitar` *(Institucional)* : Solicitud de cotización personalizada con variables de tiraje y acabado.
-- `GET /api/cotizaciones/mis-solicitudes` *(Institucional)* : Seguimiento de cotizaciones del cliente.
+- `GET /api/cotizaciones/mis-solicitudes` *(Institucional)* : Historial de cotizaciones emitidas por el cliente institucional.
 - `GET /api/cotizaciones/bandeja` *(Asesor/Admin)* : Bandeja comercial de cotizaciones pendientes.
+- `PATCH /api/cotizaciones/solicitudes/:id/asignar` *(Asesor)* : Asignarse la solicitud comercial.
+- `POST /api/cotizaciones/solicitudes/:id/propuesta` *(Asesor)* : Emisión de propuesta formal digital con costos y días de entrega.
+- `POST /api/cotizaciones/solicitudes/:id/responder` *(Institucional)* : Aprobación o rechazo de la propuesta por parte del cliente.
 - `PATCH /api/cotizaciones/solicitudes/:id/asignar` *(Asesor)* : Asignarse la solicitud comercial.
 - `POST /api/cotizaciones/solicitudes/:id/propuesta` *(Asesor)* : Emisión de propuesta formal digital con costos y días de entrega.
 - `POST /api/cotizaciones/solicitudes/:id/responder` *(Institucional)* : Aprobación o rechazo de la propuesta por parte del cliente.
