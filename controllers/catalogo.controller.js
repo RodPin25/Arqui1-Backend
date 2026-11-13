@@ -10,6 +10,14 @@ import {
 } from "../models/index.js";
 import { subirACloudinary } from "../config/cloudinary.js";
 
+export {
+  listarAutores,
+  obtenerAutorPorId,
+  crearAutor,
+  actualizarAutor,
+  eliminarAutor,
+} from "./autor.controller.js";
+
 /**
  * Listado paginado y con filtros de productos en catálogo
  * Query params: q, genero_id, formato_id, min_precio, max_precio, en_stock, orden, page, limit
@@ -424,16 +432,7 @@ export const listarFormatos = async (req, res) => {
   }
 };
 
-export const listarAutores = async (req, res) => {
-  try {
-    const autores = await Autores.findAll({
-      order: [["apellidos", "ASC"], ["nombres", "ASC"]],
-    });
-    return res.status(200).json({ ok: true, data: autores });
-  } catch (error) {
-    return res.status(500).json({ ok: false, error: error.message });
-  }
-};
+
 
 export const listarEditoriales = async (req, res) => {
   try {
@@ -699,16 +698,7 @@ export const actualizarStock = async (req, res) => {
   }
 };
 
-export const crearAutor = async (req, res) => {
-  try {
-    const { nombres, apellidos, biografia } = req.body;
-    if (!nombres || !apellidos) return res.status(400).json({ ok: false, mensaje: "Nombres y apellidos son requeridos" });
-    const autor = await Autores.create({ nombres, apellidos, biografia });
-    return res.status(201).json({ ok: true, mensaje: "Autor creado", data: autor });
-  } catch (error) {
-    return res.status(500).json({ ok: false, error: error.message });
-  }
-};
+
 
 export const crearGenero = async (req, res) => {
   try {

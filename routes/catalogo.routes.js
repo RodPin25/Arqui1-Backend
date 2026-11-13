@@ -9,13 +9,16 @@ import {
   listarGeneros,
   listarFormatos,
   listarAutores,
+  obtenerAutorPorId,
+  crearAutor,
+  actualizarAutor,
+  eliminarAutor,
   listarEditoriales,
   crearLibro,
   actualizarLibro,
   actualizarPortadaLibro,
   subirPortadaLibro,
   actualizarStock,
-  crearAutor,
   crearGenero,
   crearEditorial,
 } from "../controllers/catalogo.controller.js";
@@ -31,6 +34,7 @@ router.get("/landing", obtenerLanding);
 router.get("/generos", listarGeneros);
 router.get("/formatos", listarFormatos);
 router.get("/autores", listarAutores);
+router.get("/autores/:id", obtenerAutorPorId);
 router.get("/editoriales", listarEditoriales);
 
 // Catálogo público
@@ -50,7 +54,9 @@ router.patch("/:id/stock", verificarToken, autorizarRoles("ADMIN", "ADMINISTRADO
 router.post("/libros", verificarToken, autorizarRoles("ADMIN", "ADMINISTRADOR"), uploadPortada, crearLibro);
 router.put("/libros/:id", verificarToken, autorizarRoles("ADMIN", "ADMINISTRADOR"), uploadPortada, actualizarLibro);
 router.patch("/libros/:id/portada", verificarToken, autorizarRoles("ADMIN", "ADMINISTRADOR"), uploadPortada, actualizarPortadaLibro);
-router.post("/autores", verificarToken, autorizarRoles("ADMIN", "ADMINISTRADOR"), crearAutor);
+router.post("/autores", verificarToken, autorizarRoles("ADMIN", "ADMINISTRADOR", "ASESOR", "ASESOR_VENTAS"), crearAutor);
+router.put("/autores/:id", verificarToken, autorizarRoles("ADMIN", "ADMINISTRADOR"), actualizarAutor);
+router.delete("/autores/:id", verificarToken, autorizarRoles("ADMIN", "ADMINISTRADOR"), eliminarAutor);
 router.post("/generos", verificarToken, autorizarRoles("ADMIN", "ADMINISTRADOR"), crearGenero);
 router.post("/editoriales", verificarToken, autorizarRoles("ADMIN", "ADMINISTRADOR"), crearEditorial);
 

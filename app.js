@@ -9,6 +9,7 @@ import carritoRoutes from "./routes/carrito.routes.js";
 import ordenRoutes from "./routes/orden.routes.js";
 import cotizacionRoutes from "./routes/cotizacion.routes.js";
 import reportesRoutes from "./routes/reportes.routes.js";
+import autorRoutes from "./routes/autor.routes.js";
 import swaggerUi from "swagger-ui-express";
 import { swaggerDocument } from "./config/swagger.js";
 
@@ -55,5 +56,6 @@ app.use("/api/carrito", carritoRoutes);
 app.use("/api/ordenes", ordenRoutes);
 app.use("/api/cotizaciones", cotizacionRoutes);
 app.use("/api/reportes", reportesRoutes);
+app.use("/api/autores", autorRoutes);
 
 export default app;

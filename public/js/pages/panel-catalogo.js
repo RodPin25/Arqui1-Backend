@@ -292,6 +292,64 @@ function tablaProductos(existencias = false) {
         : h("tr", {}, h("td", { colspan: "6", class: "table-empty" }, "No hay resultados."))));
 }
 
+function editarAutor(autor) {
+  const nombresIn = h("input", { type: "text", required: true, value: autor.nombres, maxlength: "150" });
+  const apellidosIn = h("input", { type: "text", required: true, value: autor.apellidos, maxlength: "150" });
+  const biografiaIn = h("textarea", { maxlength: "1000" }, autor.biografia || "");
+  const boton = h("button", { class: "btn full", type: "submit" }, "Guardar cambios");
+  const cerrar = modal("Editar autor", h("form", {
+    novalidate: true,
+    onsubmit: (e) => {
+      e.preventDefault();
+      if (!validarFormulario(e.currentTarget)) return;
+      ocupado(boton, async () => {
+        try {
+          await catalogoApi.actualizarAutor(autor.id, {
+            nombres: nombresIn.value.trim(),
+            apellidos: apellidosIn.value.trim(),
+            biografia: biografiaIn.value.trim() || null,
+          });
+          toast("Autor actualizado exitosamente");
+          cerrar();
+          await cargar(false);
+        } catch (error) {
+          toast(error.message, { error: true });
+        }
+      });
+    },
+  }, campo("Nombres", nombresIn), campo("Apellidos", apellidosIn), campo("Biografía", biografiaIn), boton));
+}
+
+async function eliminarAutorReg(autor) {
+  const ok = await confirmar({
+    titulo: "¿Eliminar autor?", peligro: true, boton: "Sí, eliminar",
+    mensaje: `¿Desea eliminar a '${nombreCompleto(autor)}' del catálogo? Es una eliminación lógica.`,
+  });
+  if (!ok) return;
+  try {
+    await catalogoApi.eliminarAutor(autor.id);
+    toast("Autor eliminado");
+    await cargar(false);
+  } catch (error) {
+    toast(error.message, { error: true });
+  }
+}
+
+function tablaAutores() {
+  const filas = datos.autores.filter((a) => coincide(`${nombreCompleto(a)} ${a.biografia || ""}`));
+  return h("table", { class: "data-table" },
+    h("thead", {}, h("tr", {}, h("th", {}, "Autor"), h("th", {}, "Biografía"), h("th", { class: "actions" }, "Acciones"))),
+    h("tbody", {},
+      filas.length
+        ? filas.map((a) => h("tr", {},
+            h("td", { "data-label": "Autor" }, h("b", {}, nombreCompleto(a))),
+            h("td", { "data-label": "Biografía" }, a.biografia || "No registrada"),
+            h("td", { class: "actions" },
+              h("button", { class: "row-action", onclick: () => editarAutor(a) }, "Editar"),
+              h("button", { class: "row-action muted", onclick: () => eliminarAutorReg(a) }, "Eliminar"))))
+        : h("tr", {}, h("td", { colspan: "3", class: "table-empty" }, "No hay resultados."))));
+}
+
 function tablaSimple(lista, columnas) {
   const filas = lista.filter((x) => coincide(columnas.map(([, f]) => f(x)).join(" ")));
   return h("table", { class: "data-table" },
@@ -306,7 +364,7 @@ function pintar() {
   const tablas = {
     Libros: () => tablaProductos(),
     Existencias: () => tablaProductos(true),
-    Autores: () => tablaSimple(datos.autores, [["Autor", nombreCompleto], ["Biografía", (a) => a.biografia]]),
+    Autores: () => tablaAutores(),
     Géneros: () => tablaSimple(datos.generos, [["Género", (g) => g.nombre], ["Descripción", (g) => g.descripcion]]),
     Editoriales: () => tablaSimple(datos.editoriales, [["Editorial", (e) => e.nombre], ["Contacto", (e) => e.email_contacto], ["Sitio web", (e) => e.sitio_web]]),
   };

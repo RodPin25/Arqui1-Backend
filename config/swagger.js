@@ -48,6 +48,7 @@ Documentación técnica interactiva de la **Plataforma Web Editorial Multicanal*
   tags: [
     { name: "Salud y Sistema", description: "Verificación de conexión con PostgreSQL y estado del servidor" },
     { name: "Autenticación y Usuarios", description: "Login, registro minorista/institucional y administración RBAC" },
+    { name: "Autores", description: "CRUD completo de autores bibliográficos y sus obras (RF-05.1)" },
     { name: "Catálogo y Libros", description: "Búsqueda en tiempo real, fichas técnicas, subida a Cloudinary y CRUD" },
     { name: "Carrito de Compras", description: "Gestión de ítems y liquidación dinámica del Modelo" },
     { name: "Órdenes y Checkout", description: "Proceso de compra, temporizador de 10 min, idempotencia y monitoreo" },
@@ -346,6 +347,97 @@ Documentación técnica interactiva de la **Plataforma Web Editorial Multicanal*
         },
         responses: {
           200: { description: "Stock actualizado" },
+        },
+      },
+    },
+
+    // -------------------------------------------------------------
+    // AUTORES (CRUD COMPLETO RF-05.1)
+    // -------------------------------------------------------------
+    "/api/autores": {
+      get: {
+        tags: ["Autores"],
+        summary: "Listar autores con filtros de búsqueda y libros asociados",
+        parameters: [
+          { name: "q", in: "query", schema: { type: "string" }, description: "Búsqueda por nombres, apellidos o biografía" },
+          { name: "incluir_libros", in: "query", schema: { type: "boolean" }, description: "Incluir listado de obras del autor" },
+          { name: "limit", in: "query", schema: { type: "integer" } },
+          { name: "offset", in: "query", schema: { type: "integer" } },
+        ],
+        responses: {
+          200: { description: "Listado de autores obtenido exitosamente" },
+        },
+      },
+      post: {
+        tags: ["Autores"],
+        summary: "Crear un nuevo autor (Admin / Asesor - RF-05.1)",
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                required: ["nombres", "apellidos"],
+                properties: {
+                  nombres: { type: "string", example: "Gabriel" },
+                  apellidos: { type: "string", example: "García Márquez" },
+                  biografia: { type: "string", example: "Escritor y periodista colombiano, Premio Nobel de Literatura 1982." },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          201: { description: "Autor creado exitosamente" },
+          400: { description: "Datos requeridos faltantes" },
+        },
+      },
+    },
+
+    "/api/autores/{id}": {
+      get: {
+        tags: ["Autores"],
+        summary: "Obtener detalle de un autor y sus libros asociados por ID",
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer" } }],
+        responses: {
+          200: { description: "Datos del autor y lista de libros publicados" },
+          404: { description: "Autor no encontrado" },
+        },
+      },
+      put: {
+        tags: ["Autores"],
+        summary: "Actualizar datos de un autor (Admin - RF-05.1)",
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer" } }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  nombres: { type: "string", example: "Gabriel" },
+                  apellidos: { type: "string", example: "García Márquez" },
+                  biografia: { type: "string", example: "Biografía actualizada..." },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: { description: "Autor actualizado exitosamente" },
+          404: { description: "Autor no encontrado" },
+        },
+      },
+      delete: {
+        tags: ["Autores"],
+        summary: "Eliminar lógicamente un autor (Admin - RF-05.1)",
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: "id", in: "path", required: true, schema: { type: "integer" } }],
+        responses: {
+          200: { description: "Autor eliminado lógicamente (soft-delete)" },
+          404: { description: "Autor no encontrado" },
         },
       },
     },

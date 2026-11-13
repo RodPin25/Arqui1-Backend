@@ -95,6 +95,7 @@ Arqui1-Backend/
 │   └── swagger.js              # Especificación OpenAPI 3.0 / Swagger UI interactivo
 ├── controllers/
 │   ├── auth.controller.js      # Autenticación, perfiles y gestión RBAC de usuarios
+│   ├── autor.controller.js     # CRUD completo de autores bibliográficos y sus obras (RF-05.1)
 │   ├── carrito.controller.js   # Gestión de carritos y consumo de lógica del Modelo
 │   ├── catalogo.controller.js  # Catálogo bibliográfico, búsqueda multifiltro y subida de portadas
 │   ├── cotizacion.controller.js# Solicitudes y propuestas comerciales B2B
@@ -147,6 +148,7 @@ Arqui1-Backend/
 │       └── pages/              # Un script por vista
 ├── routes/
 │   ├── auth.routes.js          # Rutas de autenticación y gestión de usuarios
+│   ├── autor.routes.js         # Rutas RESTful dedicadas para autores (/api/autores)
 │   ├── carrito.routes.js       # Rutas del carrito de compras
 │   ├── catalogo.routes.js      # Rutas de productos, filtros, metadatos y portadas
 │   ├── cotizacion.routes.js    # Rutas de cotizaciones comerciales B2B
@@ -321,6 +323,13 @@ Para evitar duplicidad en transacciones y garantizar una experiencia de compra c
 - `POST /api/catalogo/libros` *(Admin)* : Crear libro (acepta `portada` como archivo físico o URL directa).
 - `PUT /api/catalogo/libros/:id` *(Admin)* : Actualizar libro y su portada.
 - `PATCH /api/catalogo/libros/:id/portada` *(Admin)* : Actualizar exclusivamente la portada del libro subiendo una nueva imagen a Cloudinary.
+
+### Autores (`/api/autores` y `/api/catalogo/autores`)
+- `GET /api/autores` : Listar autores con soporte para filtros de búsqueda (`q`), paginación (`limit`, `offset`) y obras asociadas (`incluir_libros=true`).
+- `GET /api/autores/:id` : Detalle completo del autor con la relación de sus libros publicados.
+- `POST /api/autores` *(Admin/Asesor)* : Registrar un nuevo autor (`nombres`, `apellidos`, `biografia`).
+- `PUT /api/autores/:id` *(Admin)* : Actualizar datos biográficos y personales de un autor.
+- `DELETE /api/autores/:id` *(Admin)* : Eliminación lógica (*soft-delete*) del autor conservando integridad histórica.
 
 ### Carrito de Compras (`/api/carrito`)
 - `GET /api/carrito` : Obtener carrito con desglose dinámico calculado por el Modelo.
