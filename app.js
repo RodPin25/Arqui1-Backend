@@ -9,6 +9,8 @@ import carritoRoutes from "./routes/carrito.routes.js";
 import ordenRoutes from "./routes/orden.routes.js";
 import cotizacionRoutes from "./routes/cotizacion.routes.js";
 import reportesRoutes from "./routes/reportes.routes.js";
+import swaggerUi from "swagger-ui-express";
+import { swaggerDocument } from "./config/swagger.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -22,6 +24,11 @@ app.use(express.urlencoded({ extended: true }));
 
 // Servir la capa de Vista (View) estática y responsiva de la plataforma MVC
 app.use(express.static(path.join(__dirname, "public")));
+
+// Documentación Interactiva Swagger / OpenAPI
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+app.get("/api-docs.json", (req, res) => res.json(swaggerDocument));
 
 // Endpoint de prueba de salud y conexión a PostgreSQL
 app.get("/api/health", async (req, res) => {

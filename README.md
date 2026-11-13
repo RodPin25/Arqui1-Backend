@@ -173,8 +173,10 @@ npm run dev
 npm start
 ```
 
-El servidor estará escuchando en: `http://localhost:3000`  
-Verificación de salud: `http://localhost:3000/api/health`
+El servidor estará escuchando en: `http://localhost:3000` (o `3001` si el 3000 está ocupado)  
+- **Documentación Swagger UI interactiva:** `http://localhost:3000/api-docs` (o `/docs`)
+- **Especificación OpenAPI (JSON):** `http://localhost:3000/api-docs.json`
+- **Verificación de salud:** `http://localhost:3000/api/health`
 
 ---
 
@@ -252,6 +254,10 @@ Para evitar duplicidad en transacciones y garantizar una experiencia de compra c
 - `GET /api/catalogo/:id` : Ficha técnica del libro con sus variantes disponibles.
 - `POST /api/catalogo` *(Admin)* : Crear producto en catálogo.
 - `PATCH /api/catalogo/:id/stock` *(Admin)* : Ajustar stock disponible.
+- `POST /api/catalogo/subir-portada` *(Admin)* : Subir archivo de imagen (Multer multipart/form-data) directamente a Cloudinary y obtener `url`.
+- `POST /api/catalogo/libros` *(Admin)* : Crear libro (acepta `portada` como archivo físico o URL directa).
+- `PUT /api/catalogo/libros/:id` *(Admin)* : Actualizar libro y su portada.
+- `PATCH /api/catalogo/libros/:id/portada` *(Admin)* : Actualizar exclusivamente la portada del libro subiendo una nueva imagen a Cloudinary.
 
 ### Carrito de Compras (`/api/carrito`)
 - `GET /api/carrito` : Obtener carrito con desglose dinámico calculado por el Modelo.

@@ -12,12 +12,15 @@ import {
   listarEditoriales,
   crearLibro,
   actualizarLibro,
+  actualizarPortadaLibro,
+  subirPortadaLibro,
   actualizarStock,
   crearAutor,
   crearGenero,
   crearEditorial,
 } from "../controllers/catalogo.controller.js";
 import { verificarToken, autorizarRoles } from "../middlewares/auth.middleware.js";
+import { uploadPortada } from "../middlewares/upload.middleware.js";
 
 const router = Router();
 
@@ -39,10 +42,14 @@ router.post("/", verificarToken, autorizarRoles("ADMIN", "ADMINISTRADOR"), crear
 router.put("/:id", verificarToken, autorizarRoles("ADMIN", "ADMINISTRADOR"), actualizarProducto);
 router.delete("/:id", verificarToken, autorizarRoles("ADMIN", "ADMINISTRADOR"), eliminarProducto);
 
+// Subida de portadas e imágenes a Cloudinary (Admin)
+router.post("/subir-portada", verificarToken, autorizarRoles("ADMIN", "ADMINISTRADOR"), uploadPortada, subirPortadaLibro);
+
 // CRUD de Entidades Base del Catálogo (Admin)
 router.patch("/:id/stock", verificarToken, autorizarRoles("ADMIN", "ADMINISTRADOR"), actualizarStock);
-router.post("/libros", verificarToken, autorizarRoles("ADMIN", "ADMINISTRADOR"), crearLibro);
-router.put("/libros/:id", verificarToken, autorizarRoles("ADMIN", "ADMINISTRADOR"), actualizarLibro);
+router.post("/libros", verificarToken, autorizarRoles("ADMIN", "ADMINISTRADOR"), uploadPortada, crearLibro);
+router.put("/libros/:id", verificarToken, autorizarRoles("ADMIN", "ADMINISTRADOR"), uploadPortada, actualizarLibro);
+router.patch("/libros/:id/portada", verificarToken, autorizarRoles("ADMIN", "ADMINISTRADOR"), uploadPortada, actualizarPortadaLibro);
 router.post("/autores", verificarToken, autorizarRoles("ADMIN", "ADMINISTRADOR"), crearAutor);
 router.post("/generos", verificarToken, autorizarRoles("ADMIN", "ADMINISTRADOR"), crearGenero);
 router.post("/editoriales", verificarToken, autorizarRoles("ADMIN", "ADMINISTRADOR"), crearEditorial);

@@ -8,6 +8,7 @@ import {
   Editorial,
   sequelize,
 } from "../models/index.js";
+import { subirACloudinary } from "../config/cloudinary.js";
 
 /**
  * Listado paginado y con filtros de productos en catálogo
@@ -535,10 +536,69 @@ export const obtenerLanding = async (req, res) => {
 /**
  * RF-05.1 CRUD de Libros (Admin)
  */
+/**
+ * RF-05.1 Subir archivo de portada directamente a Cloudinary
+ */
+export const subirPortadaLibro = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        ok: false,
+        mensaje: "Debe proporcionar un archivo de imagen en el campo 'portada'",
+      });
+    }
+
+    const resultado = await subirACloudinary(req.file.buffer);
+
+    return res.status(200).json({
+      ok: true,
+      mensaje: "Portada subida exitosamente a Cloudinary",
+      data: {
+        url: resultado.secure_url,
+        public_id: resultado.public_id,
+        format: resultado.format,
+        bytes: resultado.bytes,
+      },
+    });
+  } catch (error) {
+    console.error("Error al subir portada a Cloudinary:", error);
+    return res.status(500).json({
+      ok: false,
+      mensaje: "Error interno al subir portada a Cloudinary",
+      error: error.message,
+    });
+  }
+};
+
+/**
+ * RF-05.1 CRUD de Libros (Admin) con soporte de subida a Cloudinary
+ */
 export const crearLibro = async (req, res) => {
   try {
-    const { titulo, sinopsis, anio_edicion, portada_url, autores_ids, generos_ids, editorial_id } = req.body;
+    let { titulo, sinopsis, anio_edicion, portada_url, autores_ids, generos_ids, editorial_id } = req.body;
     if (!titulo) return res.status(400).json({ ok: false, mensaje: "El título es obligatorio" });
+
+    // Si se subió un archivo físico de portada, subirlo a Cloudinary
+    if (req.file) {
+      const uploadRes = await subirACloudinary(req.file.buffer);
+      portada_url = uploadRes.secure_url;
+    }
+
+    // Normalizar arrays si vienen por FormData (multipart/form-data)
+    if (typeof autores_ids === "string") {
+      try {
+        autores_ids = JSON.parse(autores_ids);
+      } catch (_) {
+        autores_ids = [autores_ids];
+      }
+    }
+    if (typeof generos_ids === "string") {
+      try {
+        generos_ids = JSON.parse(generos_ids);
+      } catch (_) {
+        generos_ids = [generos_ids];
+      }
+    }
 
     const libro = await Libros.create({ titulo, sinopsis, anio_edicion, portada_url, activo: true });
 
@@ -546,7 +606,15 @@ export const crearLibro = async (req, res) => {
     if (generos_ids && generos_ids.length > 0) await libro.setGeneros(generos_ids);
     if (editorial_id) await libro.setEditoriales([editorial_id]);
 
-    return res.status(201).json({ ok: true, mensaje: "Libro creado exitosamente", data: libro });
+    const libroCompleto = await Libros.findByPk(libro.id, {
+      include: [
+        { model: Autores, as: "autores", through: { attributes: [] } },
+        { model: Generos, as: "generos", through: { attributes: [] } },
+        { model: Editorial, as: "editoriales", through: { attributes: [] } },
+      ],
+    });
+
+    return res.status(201).json({ ok: true, mensaje: "Libro creado exitosamente", data: libroCompleto });
   } catch (error) {
     return res.status(500).json({ ok: false, error: error.message });
   }
@@ -555,10 +623,16 @@ export const crearLibro = async (req, res) => {
 export const actualizarLibro = async (req, res) => {
   try {
     const { id } = req.params;
-    const { titulo, sinopsis, anio_edicion, portada_url, activo } = req.body;
+    let { titulo, sinopsis, anio_edicion, portada_url, activo } = req.body;
 
     const libro = await Libros.findByPk(id);
     if (!libro) return res.status(404).json({ ok: false, mensaje: "Libro no encontrado" });
+
+    // Si viene archivo de portada en la actualización
+    if (req.file) {
+      const uploadRes = await subirACloudinary(req.file.buffer);
+      portada_url = uploadRes.secure_url;
+    }
 
     if (titulo !== undefined) libro.titulo = titulo.trim();
     if (sinopsis !== undefined) libro.sinopsis = sinopsis.trim();
@@ -568,6 +642,37 @@ export const actualizarLibro = async (req, res) => {
 
     await libro.save();
     return res.status(200).json({ ok: true, mensaje: "Libro actualizado", data: libro });
+  } catch (error) {
+    return res.status(500).json({ ok: false, error: error.message });
+  }
+};
+
+/**
+ * Actualizar exclusivamente la portada de un libro mediante subida directa
+ */
+export const actualizarPortadaLibro = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!req.file) {
+      return res.status(400).json({
+        ok: false,
+        mensaje: "Debe proporcionar una imagen en el campo 'portada'",
+      });
+    }
+
+    const libro = await Libros.findByPk(id);
+    if (!libro) return res.status(404).json({ ok: false, mensaje: "Libro no encontrado" });
+
+    const uploadRes = await subirACloudinary(req.file.buffer);
+    libro.portada_url = uploadRes.secure_url;
+    await libro.save();
+
+    return res.status(200).json({
+      ok: true,
+      mensaje: "Portada del libro actualizada exitosamente en Cloudinary",
+      data: libro,
+    });
   } catch (error) {
     return res.status(500).json({ ok: false, error: error.message });
   }

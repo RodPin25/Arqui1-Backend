@@ -28,6 +28,7 @@ async function main() {
     const iniciarEscucha = (puerto) => {
       httpServer.listen(puerto, () => {
         console.log(`🚀 Servidor HTTP + WebSockets corriendo en http://localhost:${puerto}`);
+        console.log(`📚 Documentación Swagger UI: http://localhost:${puerto}/api-docs`);
         console.log(`Prueba de salud: http://localhost:${puerto}/api/health`);
         console.log(`Auth endpoints: http://localhost:${puerto}/api/auth/login`);
         console.log(`Reportería en vivo: http://localhost:${puerto}/api/reportes/dashboard`);
