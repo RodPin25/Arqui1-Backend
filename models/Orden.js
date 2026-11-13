@@ -86,7 +86,7 @@ Orden.init(
       allowNull: false,
     },
     idempotency_key: {
-      type: DataTypes.STRING(100),
+      type: DataTypes.STRING(255),
       allowNull: true,
       unique: true,
     },

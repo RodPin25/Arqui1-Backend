@@ -2,12 +2,10 @@
 -- PostgreSQL database dump
 --
 
-\restrict pd7oYpv7wfoaIi7owT32hUrGGrl0mO4C7Du79mvq2vfKsXnJOEywUWdEDQRtPDr
+\restrict ZXm5TvXKgTdZCSWbYU1EXJNxfPksq37eeYcXOBKKH10YPgYg8UFSbZcNdeOQpyz
 
 -- Dumped from database version 16.15 (Ubuntu 16.15-0ubuntu0.24.04.1)
 -- Dumped by pg_dump version 16.15 (Ubuntu 16.15-0ubuntu0.24.04.1)
-
--- Started on 2026-11-12 10:47:47 CST
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -20,8 +18,167 @@ SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
 
+ALTER TABLE IF EXISTS ONLY public.usuarios DROP CONSTRAINT IF EXISTS usuarios_rol_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.ordenes DROP CONSTRAINT IF EXISTS ordenes_usuario_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.orden_detalles DROP CONSTRAINT IF EXISTS orden_detalles_producto_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.orden_detalles DROP CONSTRAINT IF EXISTS orden_detalles_orden_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.idempotencias DROP CONSTRAINT IF EXISTS idempotencias_usuario_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.idempotencias DROP CONSTRAINT IF EXISTS idempotencias_orden_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.perfiles_institucionales DROP CONSTRAINT IF EXISTS fk_perfiles_usuarios;
+ALTER TABLE IF EXISTS ONLY public.libros_generos DROP CONSTRAINT IF EXISTS fk_lg_libro;
+ALTER TABLE IF EXISTS ONLY public.libros_generos DROP CONSTRAINT IF EXISTS fk_lg_genero;
+ALTER TABLE IF EXISTS ONLY public.libros_editoriales DROP CONSTRAINT IF EXISTS fk_le_libro;
+ALTER TABLE IF EXISTS ONLY public.libros_editoriales DROP CONSTRAINT IF EXISTS fk_le_editorial;
+ALTER TABLE IF EXISTS ONLY public.libros_autores DROP CONSTRAINT IF EXISTS fk_la_libro;
+ALTER TABLE IF EXISTS ONLY public.libros_autores DROP CONSTRAINT IF EXISTS fk_la_autor;
+ALTER TABLE IF EXISTS ONLY public.cotizaciones_solicitudes DROP CONSTRAINT IF EXISTS cotizaciones_solicitudes_libro_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.cotizaciones_solicitudes DROP CONSTRAINT IF EXISTS cotizaciones_solicitudes_cliente_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.cotizaciones_solicitudes DROP CONSTRAINT IF EXISTS cotizaciones_solicitudes_asesor_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.cotizaciones_propuestas DROP CONSTRAINT IF EXISTS cotizaciones_propuestas_solicitud_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.cotizaciones_propuestas DROP CONSTRAINT IF EXISTS cotizaciones_propuestas_asesor_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.checkout_sesiones DROP CONSTRAINT IF EXISTS checkout_sesiones_usuario_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.checkout_sesiones DROP CONSTRAINT IF EXISTS checkout_sesiones_orden_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.catalogo_productos DROP CONSTRAINT IF EXISTS catalogo_productos_libro_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.catalogo_productos DROP CONSTRAINT IF EXISTS catalogo_productos_formato_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.carritos DROP CONSTRAINT IF EXISTS carritos_usuario_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.carrito_items DROP CONSTRAINT IF EXISTS carrito_items_producto_id_fkey;
+ALTER TABLE IF EXISTS ONLY public.carrito_items DROP CONSTRAINT IF EXISTS carrito_items_carrito_id_fkey;
+DROP TRIGGER IF EXISTS trg_usuarios_updated_at ON public.usuarios;
+DROP TRIGGER IF EXISTS trg_perfiles_institucionales_updated_at ON public.perfiles_institucionales;
+DROP TRIGGER IF EXISTS trg_ordenes_updated_at ON public.ordenes;
+DROP TRIGGER IF EXISTS trg_libros_updated_at ON public.libros;
+DROP TRIGGER IF EXISTS trg_generos_updated_at ON public.generos;
+DROP TRIGGER IF EXISTS trg_editoriales_updated_at ON public.editoriales;
+DROP TRIGGER IF EXISTS trg_cotizaciones_solicitudes_updated_at ON public.cotizaciones_solicitudes;
+DROP TRIGGER IF EXISTS trg_cotizaciones_propuestas_updated_at ON public.cotizaciones_propuestas;
+DROP TRIGGER IF EXISTS trg_catalogo_productos_updated_at ON public.catalogo_productos;
+DROP TRIGGER IF EXISTS trg_carritos_updated_at ON public.carritos;
+DROP TRIGGER IF EXISTS trg_carrito_items_updated_at ON public.carrito_items;
+DROP TRIGGER IF EXISTS trg_autores_updated_at ON public.autores;
+DROP INDEX IF EXISTS public.idx_ordenes_usuario_fecha;
+DROP INDEX IF EXISTS public.idx_ordenes_estado;
+DROP INDEX IF EXISTS public.idx_orden_detalles_orden;
+DROP INDEX IF EXISTS public.idx_libros_titulo;
+DROP INDEX IF EXISTS public.idx_libros_generos_genero;
+DROP INDEX IF EXISTS public.idx_libros_editoriales_editorial;
+DROP INDEX IF EXISTS public.idx_libros_autores_autor;
+DROP INDEX IF EXISTS public.idx_libros_anio;
+DROP INDEX IF EXISTS public.idx_idempotencias_key;
+DROP INDEX IF EXISTS public.idx_cotizaciones_estado_fecha;
+DROP INDEX IF EXISTS public.idx_cotizaciones_cliente;
+DROP INDEX IF EXISTS public.idx_cotizaciones_asesor;
+DROP INDEX IF EXISTS public.idx_checkout_sesiones_usuario;
+DROP INDEX IF EXISTS public.idx_catalogo_precio;
+DROP INDEX IF EXISTS public.idx_catalogo_libro_formato;
+DROP INDEX IF EXISTS public.idx_catalogo_isbn;
+ALTER TABLE IF EXISTS ONLY public.usuarios DROP CONSTRAINT IF EXISTS usuarios_pkey;
+ALTER TABLE IF EXISTS ONLY public.usuarios DROP CONSTRAINT IF EXISTS usuarios_email_key2;
+ALTER TABLE IF EXISTS ONLY public.usuarios DROP CONSTRAINT IF EXISTS usuarios_email_key1;
+ALTER TABLE IF EXISTS ONLY public.usuarios DROP CONSTRAINT IF EXISTS usuarios_email_key;
+ALTER TABLE IF EXISTS ONLY public.catalogo_productos DROP CONSTRAINT IF EXISTS uq_libro_formato;
+ALTER TABLE IF EXISTS ONLY public.carrito_items DROP CONSTRAINT IF EXISTS uq_carrito_producto;
+ALTER TABLE IF EXISTS ONLY public.roles DROP CONSTRAINT IF EXISTS roles_pkey;
+ALTER TABLE IF EXISTS ONLY public.roles DROP CONSTRAINT IF EXISTS roles_nombre_key2;
+ALTER TABLE IF EXISTS ONLY public.roles DROP CONSTRAINT IF EXISTS roles_nombre_key1;
+ALTER TABLE IF EXISTS ONLY public.roles DROP CONSTRAINT IF EXISTS roles_nombre_key;
+ALTER TABLE IF EXISTS ONLY public.perfiles_institucionales DROP CONSTRAINT IF EXISTS perfiles_institucionales_pkey;
+ALTER TABLE IF EXISTS ONLY public.perfiles_institucionales DROP CONSTRAINT IF EXISTS perfiles_institucionales_documento_tributario_key2;
+ALTER TABLE IF EXISTS ONLY public.perfiles_institucionales DROP CONSTRAINT IF EXISTS perfiles_institucionales_documento_tributario_key1;
+ALTER TABLE IF EXISTS ONLY public.perfiles_institucionales DROP CONSTRAINT IF EXISTS perfiles_institucionales_documento_tributario_key;
+ALTER TABLE IF EXISTS ONLY public.ordenes DROP CONSTRAINT IF EXISTS ordenes_pkey;
+ALTER TABLE IF EXISTS ONLY public.ordenes DROP CONSTRAINT IF EXISTS ordenes_numero_orden_key2;
+ALTER TABLE IF EXISTS ONLY public.ordenes DROP CONSTRAINT IF EXISTS ordenes_numero_orden_key1;
+ALTER TABLE IF EXISTS ONLY public.ordenes DROP CONSTRAINT IF EXISTS ordenes_numero_orden_key;
+ALTER TABLE IF EXISTS ONLY public.ordenes DROP CONSTRAINT IF EXISTS ordenes_idempotency_key_key;
+ALTER TABLE IF EXISTS ONLY public.orden_detalles DROP CONSTRAINT IF EXISTS orden_detalles_pkey;
+ALTER TABLE IF EXISTS ONLY public.libros DROP CONSTRAINT IF EXISTS libros_pkey;
+ALTER TABLE IF EXISTS ONLY public.libros_generos DROP CONSTRAINT IF EXISTS libros_generos_pkey;
+ALTER TABLE IF EXISTS ONLY public.libros_editoriales DROP CONSTRAINT IF EXISTS libros_editoriales_pkey;
+ALTER TABLE IF EXISTS ONLY public.libros_autores DROP CONSTRAINT IF EXISTS libros_autores_pkey;
+ALTER TABLE IF EXISTS ONLY public.idempotencias DROP CONSTRAINT IF EXISTS idempotencias_pkey;
+ALTER TABLE IF EXISTS ONLY public.idempotencias DROP CONSTRAINT IF EXISTS idempotencias_idempotency_key_key;
+ALTER TABLE IF EXISTS ONLY public.generos DROP CONSTRAINT IF EXISTS generos_pkey;
+ALTER TABLE IF EXISTS ONLY public.generos DROP CONSTRAINT IF EXISTS generos_nombre_key2;
+ALTER TABLE IF EXISTS ONLY public.generos DROP CONSTRAINT IF EXISTS generos_nombre_key1;
+ALTER TABLE IF EXISTS ONLY public.generos DROP CONSTRAINT IF EXISTS generos_nombre_key;
+ALTER TABLE IF EXISTS ONLY public.formatos DROP CONSTRAINT IF EXISTS formatos_pkey;
+ALTER TABLE IF EXISTS ONLY public.formatos DROP CONSTRAINT IF EXISTS formatos_codigo_key2;
+ALTER TABLE IF EXISTS ONLY public.formatos DROP CONSTRAINT IF EXISTS formatos_codigo_key1;
+ALTER TABLE IF EXISTS ONLY public.formatos DROP CONSTRAINT IF EXISTS formatos_codigo_key;
+ALTER TABLE IF EXISTS ONLY public.editoriales DROP CONSTRAINT IF EXISTS editoriales_pkey;
+ALTER TABLE IF EXISTS ONLY public.editoriales DROP CONSTRAINT IF EXISTS editoriales_nombre_key2;
+ALTER TABLE IF EXISTS ONLY public.editoriales DROP CONSTRAINT IF EXISTS editoriales_nombre_key1;
+ALTER TABLE IF EXISTS ONLY public.editoriales DROP CONSTRAINT IF EXISTS editoriales_nombre_key;
+ALTER TABLE IF EXISTS ONLY public.cotizaciones_solicitudes DROP CONSTRAINT IF EXISTS cotizaciones_solicitudes_pkey;
+ALTER TABLE IF EXISTS ONLY public.cotizaciones_solicitudes DROP CONSTRAINT IF EXISTS cotizaciones_solicitudes_codigo_solicitud_key2;
+ALTER TABLE IF EXISTS ONLY public.cotizaciones_solicitudes DROP CONSTRAINT IF EXISTS cotizaciones_solicitudes_codigo_solicitud_key1;
+ALTER TABLE IF EXISTS ONLY public.cotizaciones_solicitudes DROP CONSTRAINT IF EXISTS cotizaciones_solicitudes_codigo_solicitud_key;
+ALTER TABLE IF EXISTS ONLY public.cotizaciones_propuestas DROP CONSTRAINT IF EXISTS cotizaciones_propuestas_pkey;
+ALTER TABLE IF EXISTS ONLY public.checkout_sesiones DROP CONSTRAINT IF EXISTS checkout_sesiones_token_sesion_key;
+ALTER TABLE IF EXISTS ONLY public.checkout_sesiones DROP CONSTRAINT IF EXISTS checkout_sesiones_pkey;
+ALTER TABLE IF EXISTS ONLY public.checkout_sesiones DROP CONSTRAINT IF EXISTS checkout_sesiones_idempotency_key_key;
+ALTER TABLE IF EXISTS ONLY public.catalogo_productos DROP CONSTRAINT IF EXISTS catalogo_productos_pkey;
+ALTER TABLE IF EXISTS ONLY public.catalogo_productos DROP CONSTRAINT IF EXISTS catalogo_productos_isbn_key2;
+ALTER TABLE IF EXISTS ONLY public.catalogo_productos DROP CONSTRAINT IF EXISTS catalogo_productos_isbn_key1;
+ALTER TABLE IF EXISTS ONLY public.catalogo_productos DROP CONSTRAINT IF EXISTS catalogo_productos_isbn_key;
+ALTER TABLE IF EXISTS ONLY public.carritos DROP CONSTRAINT IF EXISTS carritos_usuario_id_key;
+ALTER TABLE IF EXISTS ONLY public.carritos DROP CONSTRAINT IF EXISTS carritos_pkey;
+ALTER TABLE IF EXISTS ONLY public.carrito_items DROP CONSTRAINT IF EXISTS carrito_items_pkey;
+ALTER TABLE IF EXISTS ONLY public.autores DROP CONSTRAINT IF EXISTS autores_pkey;
+ALTER TABLE IF EXISTS public.usuarios ALTER COLUMN id DROP DEFAULT;
+ALTER TABLE IF EXISTS public.roles ALTER COLUMN id DROP DEFAULT;
+ALTER TABLE IF EXISTS public.ordenes ALTER COLUMN id DROP DEFAULT;
+ALTER TABLE IF EXISTS public.orden_detalles ALTER COLUMN id DROP DEFAULT;
+ALTER TABLE IF EXISTS public.libros ALTER COLUMN id DROP DEFAULT;
+ALTER TABLE IF EXISTS public.idempotencias ALTER COLUMN id DROP DEFAULT;
+ALTER TABLE IF EXISTS public.generos ALTER COLUMN id DROP DEFAULT;
+ALTER TABLE IF EXISTS public.formatos ALTER COLUMN id DROP DEFAULT;
+ALTER TABLE IF EXISTS public.editoriales ALTER COLUMN id DROP DEFAULT;
+ALTER TABLE IF EXISTS public.cotizaciones_solicitudes ALTER COLUMN id DROP DEFAULT;
+ALTER TABLE IF EXISTS public.cotizaciones_propuestas ALTER COLUMN id DROP DEFAULT;
+ALTER TABLE IF EXISTS public.checkout_sesiones ALTER COLUMN id DROP DEFAULT;
+ALTER TABLE IF EXISTS public.catalogo_productos ALTER COLUMN id DROP DEFAULT;
+ALTER TABLE IF EXISTS public.carritos ALTER COLUMN id DROP DEFAULT;
+ALTER TABLE IF EXISTS public.carrito_items ALTER COLUMN id DROP DEFAULT;
+ALTER TABLE IF EXISTS public.autores ALTER COLUMN id DROP DEFAULT;
+DROP SEQUENCE IF EXISTS public.usuarios_id_seq;
+DROP TABLE IF EXISTS public.usuarios;
+DROP SEQUENCE IF EXISTS public.roles_id_seq;
+DROP TABLE IF EXISTS public.roles;
+DROP TABLE IF EXISTS public.perfiles_institucionales;
+DROP SEQUENCE IF EXISTS public.ordenes_id_seq;
+DROP TABLE IF EXISTS public.ordenes;
+DROP SEQUENCE IF EXISTS public.orden_detalles_id_seq;
+DROP TABLE IF EXISTS public.orden_detalles;
+DROP SEQUENCE IF EXISTS public.libros_id_seq;
+DROP TABLE IF EXISTS public.libros_generos;
+DROP TABLE IF EXISTS public.libros_editoriales;
+DROP TABLE IF EXISTS public.libros_autores;
+DROP TABLE IF EXISTS public.libros;
+DROP SEQUENCE IF EXISTS public.idempotencias_id_seq;
+DROP TABLE IF EXISTS public.idempotencias;
+DROP SEQUENCE IF EXISTS public.generos_id_seq;
+DROP TABLE IF EXISTS public.generos;
+DROP SEQUENCE IF EXISTS public.formatos_id_seq;
+DROP TABLE IF EXISTS public.formatos;
+DROP SEQUENCE IF EXISTS public.editoriales_id_seq;
+DROP TABLE IF EXISTS public.editoriales;
+DROP SEQUENCE IF EXISTS public.cotizaciones_solicitudes_id_seq;
+DROP TABLE IF EXISTS public.cotizaciones_solicitudes;
+DROP SEQUENCE IF EXISTS public.cotizaciones_propuestas_id_seq;
+DROP TABLE IF EXISTS public.cotizaciones_propuestas;
+DROP SEQUENCE IF EXISTS public.checkout_sesiones_id_seq;
+DROP TABLE IF EXISTS public.checkout_sesiones;
+DROP SEQUENCE IF EXISTS public.catalogo_productos_id_seq;
+DROP TABLE IF EXISTS public.catalogo_productos;
+DROP SEQUENCE IF EXISTS public.carritos_id_seq;
+DROP TABLE IF EXISTS public.carritos;
+DROP SEQUENCE IF EXISTS public.carrito_items_id_seq;
+DROP TABLE IF EXISTS public.carrito_items;
+DROP SEQUENCE IF EXISTS public.autores_id_seq;
+DROP TABLE IF EXISTS public.autores;
+DROP FUNCTION IF EXISTS public.fn_actualizar_timestamp_modificacion();
 --
--- TOC entry 253 (class 1255 OID 17104)
 -- Name: fn_actualizar_timestamp_modificacion(); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
@@ -42,7 +199,6 @@ SET default_tablespace = '';
 SET default_table_access_method = heap;
 
 --
--- TOC entry 229 (class 1259 OID 17169)
 -- Name: autores; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -60,7 +216,6 @@ CREATE TABLE public.autores (
 ALTER TABLE public.autores OWNER TO postgres;
 
 --
--- TOC entry 228 (class 1259 OID 17168)
 -- Name: autores_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
@@ -75,8 +230,6 @@ CREATE SEQUENCE public.autores_id_seq
 ALTER SEQUENCE public.autores_id_seq OWNER TO postgres;
 
 --
--- TOC entry 3747 (class 0 OID 0)
--- Dependencies: 228
 -- Name: autores_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
 
@@ -84,7 +237,6 @@ ALTER SEQUENCE public.autores_id_seq OWNED BY public.autores.id;
 
 
 --
--- TOC entry 244 (class 1259 OID 17310)
 -- Name: carrito_items; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -102,7 +254,6 @@ CREATE TABLE public.carrito_items (
 ALTER TABLE public.carrito_items OWNER TO postgres;
 
 --
--- TOC entry 243 (class 1259 OID 17309)
 -- Name: carrito_items_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
@@ -117,8 +268,6 @@ CREATE SEQUENCE public.carrito_items_id_seq
 ALTER SEQUENCE public.carrito_items_id_seq OWNER TO postgres;
 
 --
--- TOC entry 3748 (class 0 OID 0)
--- Dependencies: 243
 -- Name: carrito_items_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
 
@@ -126,7 +275,6 @@ ALTER SEQUENCE public.carrito_items_id_seq OWNED BY public.carrito_items.id;
 
 
 --
--- TOC entry 242 (class 1259 OID 17293)
 -- Name: carritos; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -142,7 +290,6 @@ CREATE TABLE public.carritos (
 ALTER TABLE public.carritos OWNER TO postgres;
 
 --
--- TOC entry 241 (class 1259 OID 17292)
 -- Name: carritos_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
@@ -157,8 +304,6 @@ CREATE SEQUENCE public.carritos_id_seq
 ALTER SEQUENCE public.carritos_id_seq OWNER TO postgres;
 
 --
--- TOC entry 3749 (class 0 OID 0)
--- Dependencies: 241
 -- Name: carritos_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
 
@@ -166,7 +311,6 @@ ALTER SEQUENCE public.carritos_id_seq OWNED BY public.carritos.id;
 
 
 --
--- TOC entry 240 (class 1259 OID 17265)
 -- Name: catalogo_productos; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -189,8 +333,6 @@ CREATE TABLE public.catalogo_productos (
 ALTER TABLE public.catalogo_productos OWNER TO postgres;
 
 --
--- TOC entry 3750 (class 0 OID 0)
--- Dependencies: 240
 -- Name: TABLE catalogo_productos; Type: COMMENT; Schema: public; Owner: postgres
 --
 
@@ -198,7 +340,6 @@ COMMENT ON TABLE public.catalogo_productos IS 'Variantes comerciales concretas c
 
 
 --
--- TOC entry 239 (class 1259 OID 17264)
 -- Name: catalogo_productos_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
@@ -213,8 +354,6 @@ CREATE SEQUENCE public.catalogo_productos_id_seq
 ALTER SEQUENCE public.catalogo_productos_id_seq OWNER TO postgres;
 
 --
--- TOC entry 3751 (class 0 OID 0)
--- Dependencies: 239
 -- Name: catalogo_productos_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
 
@@ -222,7 +361,54 @@ ALTER SEQUENCE public.catalogo_productos_id_seq OWNED BY public.catalogo_product
 
 
 --
--- TOC entry 252 (class 1259 OID 17421)
+-- Name: checkout_sesiones; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.checkout_sesiones (
+    id bigint NOT NULL,
+    usuario_id bigint NOT NULL,
+    token_sesion character varying(100) NOT NULL,
+    idempotency_key character varying(255) NOT NULL,
+    expira_en timestamp with time zone NOT NULL,
+    estado character varying(30) DEFAULT 'iniciada'::character varying NOT NULL,
+    subtotal_base numeric(12,2) DEFAULT 0 NOT NULL,
+    descuento_total numeric(12,2) DEFAULT 0 NOT NULL,
+    total_impuestos numeric(12,2) DEFAULT 0 NOT NULL,
+    total_final numeric(12,2) DEFAULT 0 NOT NULL,
+    total_unidades integer DEFAULT 0 NOT NULL,
+    detalles_items jsonb,
+    desglose_reglas jsonb,
+    orden_id bigint,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT checkout_sesiones_estado_check CHECK (((estado)::text = ANY ((ARRAY['iniciada'::character varying, 'completada'::character varying, 'expirada'::character varying, 'cancelada'::character varying])::text[])))
+);
+
+
+ALTER TABLE public.checkout_sesiones OWNER TO postgres;
+
+--
+-- Name: checkout_sesiones_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.checkout_sesiones_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.checkout_sesiones_id_seq OWNER TO postgres;
+
+--
+-- Name: checkout_sesiones_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.checkout_sesiones_id_seq OWNED BY public.checkout_sesiones.id;
+
+
+--
 -- Name: cotizaciones_propuestas; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -248,8 +434,6 @@ CREATE TABLE public.cotizaciones_propuestas (
 ALTER TABLE public.cotizaciones_propuestas OWNER TO postgres;
 
 --
--- TOC entry 3752 (class 0 OID 0)
--- Dependencies: 252
 -- Name: TABLE cotizaciones_propuestas; Type: COMMENT; Schema: public; Owner: postgres
 --
 
@@ -257,7 +441,6 @@ COMMENT ON TABLE public.cotizaciones_propuestas IS 'Propuestas formales digitale
 
 
 --
--- TOC entry 251 (class 1259 OID 17420)
 -- Name: cotizaciones_propuestas_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
@@ -272,8 +455,6 @@ CREATE SEQUENCE public.cotizaciones_propuestas_id_seq
 ALTER SEQUENCE public.cotizaciones_propuestas_id_seq OWNER TO postgres;
 
 --
--- TOC entry 3753 (class 0 OID 0)
--- Dependencies: 251
 -- Name: cotizaciones_propuestas_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
 
@@ -281,7 +462,6 @@ ALTER SEQUENCE public.cotizaciones_propuestas_id_seq OWNED BY public.cotizacione
 
 
 --
--- TOC entry 250 (class 1259 OID 17389)
 -- Name: cotizaciones_solicitudes; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -309,8 +489,6 @@ CREATE TABLE public.cotizaciones_solicitudes (
 ALTER TABLE public.cotizaciones_solicitudes OWNER TO postgres;
 
 --
--- TOC entry 3754 (class 0 OID 0)
--- Dependencies: 250
 -- Name: TABLE cotizaciones_solicitudes; Type: COMMENT; Schema: public; Owner: postgres
 --
 
@@ -318,7 +496,6 @@ COMMENT ON TABLE public.cotizaciones_solicitudes IS 'Solicitudes de pedidos espe
 
 
 --
--- TOC entry 249 (class 1259 OID 17388)
 -- Name: cotizaciones_solicitudes_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
@@ -333,8 +510,6 @@ CREATE SEQUENCE public.cotizaciones_solicitudes_id_seq
 ALTER SEQUENCE public.cotizaciones_solicitudes_id_seq OWNER TO postgres;
 
 --
--- TOC entry 3755 (class 0 OID 0)
--- Dependencies: 249
 -- Name: cotizaciones_solicitudes_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
 
@@ -342,7 +517,6 @@ ALTER SEQUENCE public.cotizaciones_solicitudes_id_seq OWNED BY public.cotizacion
 
 
 --
--- TOC entry 227 (class 1259 OID 17155)
 -- Name: editoriales; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -360,7 +534,6 @@ CREATE TABLE public.editoriales (
 ALTER TABLE public.editoriales OWNER TO postgres;
 
 --
--- TOC entry 226 (class 1259 OID 17154)
 -- Name: editoriales_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
@@ -375,8 +548,6 @@ CREATE SEQUENCE public.editoriales_id_seq
 ALTER SEQUENCE public.editoriales_id_seq OWNER TO postgres;
 
 --
--- TOC entry 3756 (class 0 OID 0)
--- Dependencies: 226
 -- Name: editoriales_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
 
@@ -384,7 +555,6 @@ ALTER SEQUENCE public.editoriales_id_seq OWNED BY public.editoriales.id;
 
 
 --
--- TOC entry 233 (class 1259 OID 17195)
 -- Name: formatos; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -399,8 +569,6 @@ CREATE TABLE public.formatos (
 ALTER TABLE public.formatos OWNER TO postgres;
 
 --
--- TOC entry 3757 (class 0 OID 0)
--- Dependencies: 233
 -- Name: TABLE formatos; Type: COMMENT; Schema: public; Owner: postgres
 --
 
@@ -408,7 +576,6 @@ COMMENT ON TABLE public.formatos IS 'Catálogo comercial de formatos físicos y 
 
 
 --
--- TOC entry 232 (class 1259 OID 17194)
 -- Name: formatos_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
@@ -423,8 +590,6 @@ CREATE SEQUENCE public.formatos_id_seq
 ALTER SEQUENCE public.formatos_id_seq OWNER TO postgres;
 
 --
--- TOC entry 3758 (class 0 OID 0)
--- Dependencies: 232
 -- Name: formatos_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
 
@@ -432,7 +597,6 @@ ALTER SEQUENCE public.formatos_id_seq OWNED BY public.formatos.id;
 
 
 --
--- TOC entry 231 (class 1259 OID 17181)
 -- Name: generos; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -449,7 +613,6 @@ CREATE TABLE public.generos (
 ALTER TABLE public.generos OWNER TO postgres;
 
 --
--- TOC entry 230 (class 1259 OID 17180)
 -- Name: generos_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
@@ -464,8 +627,6 @@ CREATE SEQUENCE public.generos_id_seq
 ALTER SEQUENCE public.generos_id_seq OWNER TO postgres;
 
 --
--- TOC entry 3759 (class 0 OID 0)
--- Dependencies: 230
 -- Name: generos_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
 
@@ -473,7 +634,46 @@ ALTER SEQUENCE public.generos_id_seq OWNED BY public.generos.id;
 
 
 --
--- TOC entry 235 (class 1259 OID 17205)
+-- Name: idempotencias; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.idempotencias (
+    id bigint NOT NULL,
+    idempotency_key character varying(255) NOT NULL,
+    usuario_id bigint,
+    estado character varying(30) DEFAULT 'en_proceso'::character varying NOT NULL,
+    cuerpo_respuesta jsonb,
+    orden_id bigint,
+    expira_en timestamp with time zone NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.idempotencias OWNER TO postgres;
+
+--
+-- Name: idempotencias_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.idempotencias_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.idempotencias_id_seq OWNER TO postgres;
+
+--
+-- Name: idempotencias_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.idempotencias_id_seq OWNED BY public.idempotencias.id;
+
+
+--
 -- Name: libros; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -494,8 +694,6 @@ CREATE TABLE public.libros (
 ALTER TABLE public.libros OWNER TO postgres;
 
 --
--- TOC entry 3760 (class 0 OID 0)
--- Dependencies: 235
 -- Name: TABLE libros; Type: COMMENT; Schema: public; Owner: postgres
 --
 
@@ -503,7 +701,6 @@ COMMENT ON TABLE public.libros IS 'Obra bibliográfica abstracta (padre del cat�
 
 
 --
--- TOC entry 236 (class 1259 OID 17218)
 -- Name: libros_autores; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -517,7 +714,6 @@ CREATE TABLE public.libros_autores (
 ALTER TABLE public.libros_autores OWNER TO postgres;
 
 --
--- TOC entry 238 (class 1259 OID 17249)
 -- Name: libros_editoriales; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -530,7 +726,6 @@ CREATE TABLE public.libros_editoriales (
 ALTER TABLE public.libros_editoriales OWNER TO postgres;
 
 --
--- TOC entry 237 (class 1259 OID 17234)
 -- Name: libros_generos; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -543,7 +738,6 @@ CREATE TABLE public.libros_generos (
 ALTER TABLE public.libros_generos OWNER TO postgres;
 
 --
--- TOC entry 234 (class 1259 OID 17204)
 -- Name: libros_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
@@ -558,8 +752,6 @@ CREATE SEQUENCE public.libros_id_seq
 ALTER SEQUENCE public.libros_id_seq OWNER TO postgres;
 
 --
--- TOC entry 3761 (class 0 OID 0)
--- Dependencies: 234
 -- Name: libros_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
 
@@ -567,7 +759,6 @@ ALTER SEQUENCE public.libros_id_seq OWNED BY public.libros.id;
 
 
 --
--- TOC entry 248 (class 1259 OID 17368)
 -- Name: orden_detalles; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -588,8 +779,6 @@ CREATE TABLE public.orden_detalles (
 ALTER TABLE public.orden_detalles OWNER TO postgres;
 
 --
--- TOC entry 3762 (class 0 OID 0)
--- Dependencies: 248
 -- Name: TABLE orden_detalles; Type: COMMENT; Schema: public; Owner: postgres
 --
 
@@ -597,7 +786,6 @@ COMMENT ON TABLE public.orden_detalles IS 'Líneas de pedido con congelación de
 
 
 --
--- TOC entry 247 (class 1259 OID 17367)
 -- Name: orden_detalles_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
@@ -612,8 +800,6 @@ CREATE SEQUENCE public.orden_detalles_id_seq
 ALTER SEQUENCE public.orden_detalles_id_seq OWNER TO postgres;
 
 --
--- TOC entry 3763 (class 0 OID 0)
--- Dependencies: 247
 -- Name: orden_detalles_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
 
@@ -621,7 +807,6 @@ ALTER SEQUENCE public.orden_detalles_id_seq OWNED BY public.orden_detalles.id;
 
 
 --
--- TOC entry 246 (class 1259 OID 17334)
 -- Name: ordenes; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -641,6 +826,7 @@ CREATE TABLE public.ordenes (
     fecha_orden timestamp with time zone NOT NULL,
     created_at timestamp with time zone NOT NULL,
     updated_at timestamp with time zone NOT NULL,
+    idempotency_key character varying(255),
     CONSTRAINT ordenes_descuento_institucional_check CHECK ((descuento_institucional >= (0)::numeric)),
     CONSTRAINT ordenes_descuento_volumen_check CHECK ((descuento_volumen >= (0)::numeric)),
     CONSTRAINT ordenes_estado_check CHECK (((estado)::text = ANY (ARRAY[('Pendiente'::character varying)::text, ('Aprobado'::character varying)::text, ('Enviado'::character varying)::text, ('Cancelado'::character varying)::text]))),
@@ -655,8 +841,6 @@ CREATE TABLE public.ordenes (
 ALTER TABLE public.ordenes OWNER TO postgres;
 
 --
--- TOC entry 3764 (class 0 OID 0)
--- Dependencies: 246
 -- Name: TABLE ordenes; Type: COMMENT; Schema: public; Owner: postgres
 --
 
@@ -664,7 +848,6 @@ COMMENT ON TABLE public.ordenes IS 'Órdenes de compra procesadas con desglose h
 
 
 --
--- TOC entry 245 (class 1259 OID 17333)
 -- Name: ordenes_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
@@ -679,8 +862,6 @@ CREATE SEQUENCE public.ordenes_id_seq
 ALTER SEQUENCE public.ordenes_id_seq OWNER TO postgres;
 
 --
--- TOC entry 3765 (class 0 OID 0)
--- Dependencies: 245
 -- Name: ordenes_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
 
@@ -688,7 +869,6 @@ ALTER SEQUENCE public.ordenes_id_seq OWNED BY public.ordenes.id;
 
 
 --
--- TOC entry 225 (class 1259 OID 17135)
 -- Name: perfiles_institucionales; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -708,8 +888,6 @@ CREATE TABLE public.perfiles_institucionales (
 ALTER TABLE public.perfiles_institucionales OWNER TO postgres;
 
 --
--- TOC entry 3766 (class 0 OID 0)
--- Dependencies: 225
 -- Name: TABLE perfiles_institucionales; Type: COMMENT; Schema: public; Owner: postgres
 --
 
@@ -717,7 +895,6 @@ COMMENT ON TABLE public.perfiles_institucionales IS 'Datos extendidos 1:1 para C
 
 
 --
--- TOC entry 222 (class 1259 OID 17106)
 -- Name: roles; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -732,8 +909,6 @@ CREATE TABLE public.roles (
 ALTER TABLE public.roles OWNER TO postgres;
 
 --
--- TOC entry 3767 (class 0 OID 0)
--- Dependencies: 222
 -- Name: TABLE roles; Type: COMMENT; Schema: public; Owner: postgres
 --
 
@@ -741,7 +916,6 @@ COMMENT ON TABLE public.roles IS 'Roles del sistema para control de acceso RBAC 
 
 
 --
--- TOC entry 221 (class 1259 OID 17105)
 -- Name: roles_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
@@ -756,8 +930,6 @@ CREATE SEQUENCE public.roles_id_seq
 ALTER SEQUENCE public.roles_id_seq OWNER TO postgres;
 
 --
--- TOC entry 3768 (class 0 OID 0)
--- Dependencies: 221
 -- Name: roles_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
 
@@ -765,7 +937,6 @@ ALTER SEQUENCE public.roles_id_seq OWNED BY public.roles.id;
 
 
 --
--- TOC entry 224 (class 1259 OID 17116)
 -- Name: usuarios; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -787,8 +958,6 @@ CREATE TABLE public.usuarios (
 ALTER TABLE public.usuarios OWNER TO postgres;
 
 --
--- TOC entry 3769 (class 0 OID 0)
--- Dependencies: 224
 -- Name: TABLE usuarios; Type: COMMENT; Schema: public; Owner: postgres
 --
 
@@ -796,7 +965,6 @@ COMMENT ON TABLE public.usuarios IS 'Cuentas de usuario con hashing de credencia
 
 
 --
--- TOC entry 223 (class 1259 OID 17115)
 -- Name: usuarios_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
@@ -811,8 +979,6 @@ CREATE SEQUENCE public.usuarios_id_seq
 ALTER SEQUENCE public.usuarios_id_seq OWNER TO postgres;
 
 --
--- TOC entry 3770 (class 0 OID 0)
--- Dependencies: 223
 -- Name: usuarios_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
 
@@ -820,7 +986,6 @@ ALTER SEQUENCE public.usuarios_id_seq OWNED BY public.usuarios.id;
 
 
 --
--- TOC entry 3378 (class 2604 OID 17172)
 -- Name: autores id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -828,7 +993,6 @@ ALTER TABLE ONLY public.autores ALTER COLUMN id SET DEFAULT nextval('public.auto
 
 
 --
--- TOC entry 3388 (class 2604 OID 17313)
 -- Name: carrito_items id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -836,7 +1000,6 @@ ALTER TABLE ONLY public.carrito_items ALTER COLUMN id SET DEFAULT nextval('publi
 
 
 --
--- TOC entry 3387 (class 2604 OID 17296)
 -- Name: carritos id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -844,7 +1007,6 @@ ALTER TABLE ONLY public.carritos ALTER COLUMN id SET DEFAULT nextval('public.car
 
 
 --
--- TOC entry 3384 (class 2604 OID 17268)
 -- Name: catalogo_productos id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -852,7 +1014,13 @@ ALTER TABLE ONLY public.catalogo_productos ALTER COLUMN id SET DEFAULT nextval('
 
 
 --
--- TOC entry 3400 (class 2604 OID 17424)
+-- Name: checkout_sesiones id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.checkout_sesiones ALTER COLUMN id SET DEFAULT nextval('public.checkout_sesiones_id_seq'::regclass);
+
+
+--
 -- Name: cotizaciones_propuestas id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -860,7 +1028,6 @@ ALTER TABLE ONLY public.cotizaciones_propuestas ALTER COLUMN id SET DEFAULT next
 
 
 --
--- TOC entry 3398 (class 2604 OID 17392)
 -- Name: cotizaciones_solicitudes id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -868,7 +1035,6 @@ ALTER TABLE ONLY public.cotizaciones_solicitudes ALTER COLUMN id SET DEFAULT nex
 
 
 --
--- TOC entry 3377 (class 2604 OID 17158)
 -- Name: editoriales id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -876,7 +1042,6 @@ ALTER TABLE ONLY public.editoriales ALTER COLUMN id SET DEFAULT nextval('public.
 
 
 --
--- TOC entry 3380 (class 2604 OID 17198)
 -- Name: formatos id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -884,7 +1049,6 @@ ALTER TABLE ONLY public.formatos ALTER COLUMN id SET DEFAULT nextval('public.for
 
 
 --
--- TOC entry 3379 (class 2604 OID 17184)
 -- Name: generos id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -892,7 +1056,13 @@ ALTER TABLE ONLY public.generos ALTER COLUMN id SET DEFAULT nextval('public.gene
 
 
 --
--- TOC entry 3381 (class 2604 OID 17208)
+-- Name: idempotencias id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.idempotencias ALTER COLUMN id SET DEFAULT nextval('public.idempotencias_id_seq'::regclass);
+
+
+--
 -- Name: libros id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -900,7 +1070,6 @@ ALTER TABLE ONLY public.libros ALTER COLUMN id SET DEFAULT nextval('public.libro
 
 
 --
--- TOC entry 3397 (class 2604 OID 17371)
 -- Name: orden_detalles id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -908,7 +1077,6 @@ ALTER TABLE ONLY public.orden_detalles ALTER COLUMN id SET DEFAULT nextval('publ
 
 
 --
--- TOC entry 3390 (class 2604 OID 17337)
 -- Name: ordenes id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -916,7 +1084,6 @@ ALTER TABLE ONLY public.ordenes ALTER COLUMN id SET DEFAULT nextval('public.orde
 
 
 --
--- TOC entry 3373 (class 2604 OID 17109)
 -- Name: roles id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -924,7 +1091,6 @@ ALTER TABLE ONLY public.roles ALTER COLUMN id SET DEFAULT nextval('public.roles_
 
 
 --
--- TOC entry 3374 (class 2604 OID 17119)
 -- Name: usuarios id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -932,8 +1098,6 @@ ALTER TABLE ONLY public.usuarios ALTER COLUMN id SET DEFAULT nextval('public.usu
 
 
 --
--- TOC entry 3718 (class 0 OID 17169)
--- Dependencies: 229
 -- Data for Name: autores; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
@@ -952,18 +1116,15 @@ COPY public.autores (id, nombres, apellidos, biografia, created_at, updated_at, 
 
 
 --
--- TOC entry 3733 (class 0 OID 17310)
--- Dependencies: 244
 -- Data for Name: carrito_items; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
 COPY public.carrito_items (id, carrito_id, producto_id, cantidad, created_at, updated_at) FROM stdin;
+1	2	3	1	2026-11-12 20:10:38.845-06	2026-11-12 20:10:38.845-06
 \.
 
 
 --
--- TOC entry 3731 (class 0 OID 17293)
--- Dependencies: 242
 -- Data for Name: carritos; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
@@ -979,8 +1140,6 @@ COPY public.carritos (id, usuario_id, sesion_token, created_at, updated_at) FROM
 
 
 --
--- TOC entry 3729 (class 0 OID 17265)
--- Dependencies: 240
 -- Data for Name: catalogo_productos; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
@@ -1022,8 +1181,14 @@ COPY public.catalogo_productos (id, libro_id, formato_id, isbn, precio_base, sto
 
 
 --
--- TOC entry 3741 (class 0 OID 17421)
--- Dependencies: 252
+-- Data for Name: checkout_sesiones; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.checkout_sesiones (id, usuario_id, token_sesion, idempotency_key, expira_en, estado, subtotal_base, descuento_total, total_impuestos, total_final, total_unidades, detalles_items, desglose_reglas, orden_id, created_at, updated_at) FROM stdin;
+\.
+
+
+--
 -- Data for Name: cotizaciones_propuestas; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
@@ -1032,8 +1197,6 @@ COPY public.cotizaciones_propuestas (id, solicitud_id, asesor_id, costo_unitario
 
 
 --
--- TOC entry 3739 (class 0 OID 17389)
--- Dependencies: 250
 -- Data for Name: cotizaciones_solicitudes; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
@@ -1042,8 +1205,6 @@ COPY public.cotizaciones_solicitudes (id, codigo_solicitud, cliente_id, libro_id
 
 
 --
--- TOC entry 3716 (class 0 OID 17155)
--- Dependencies: 227
 -- Data for Name: editoriales; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
@@ -1058,8 +1219,6 @@ COPY public.editoriales (id, nombre, email_contacto, sitio_web, created_at, upda
 
 
 --
--- TOC entry 3722 (class 0 OID 17195)
--- Dependencies: 233
 -- Data for Name: formatos; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
@@ -1072,8 +1231,6 @@ COPY public.formatos (id, codigo, nombre, created_at) FROM stdin;
 
 
 --
--- TOC entry 3720 (class 0 OID 17181)
--- Dependencies: 231
 -- Data for Name: generos; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
@@ -1089,8 +1246,14 @@ COPY public.generos (id, nombre, descripcion, created_at, updated_at, deleted_at
 
 
 --
--- TOC entry 3724 (class 0 OID 17205)
--- Dependencies: 235
+-- Data for Name: idempotencias; Type: TABLE DATA; Schema: public; Owner: postgres
+--
+
+COPY public.idempotencias (id, idempotency_key, usuario_id, estado, cuerpo_respuesta, orden_id, expira_en, created_at, updated_at) FROM stdin;
+\.
+
+
+--
 -- Data for Name: libros; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
@@ -1111,8 +1274,6 @@ COPY public.libros (id, titulo, sinopsis, anio_edicion, portada_url, activo, cre
 
 
 --
--- TOC entry 3725 (class 0 OID 17218)
--- Dependencies: 236
 -- Data for Name: libros_autores; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
@@ -1133,8 +1294,6 @@ COPY public.libros_autores (libro_id, autor_id, orden_autoria) FROM stdin;
 
 
 --
--- TOC entry 3727 (class 0 OID 17249)
--- Dependencies: 238
 -- Data for Name: libros_editoriales; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
@@ -1155,8 +1314,6 @@ COPY public.libros_editoriales (libro_id, editorial_id) FROM stdin;
 
 
 --
--- TOC entry 3726 (class 0 OID 17234)
--- Dependencies: 237
 -- Data for Name: libros_generos; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
@@ -1180,8 +1337,6 @@ COPY public.libros_generos (libro_id, genero_id) FROM stdin;
 
 
 --
--- TOC entry 3737 (class 0 OID 17368)
--- Dependencies: 248
 -- Data for Name: orden_detalles; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
@@ -1190,18 +1345,14 @@ COPY public.orden_detalles (id, orden_id, producto_id, cantidad, precio_unitario
 
 
 --
--- TOC entry 3735 (class 0 OID 17334)
--- Dependencies: 246
 -- Data for Name: ordenes; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
-COPY public.ordenes (id, numero_orden, usuario_id, subtotal_base, descuento_volumen, porcentaje_descuento_volumen, descuento_institucional, porcentaje_descuento_institucional, total_impuestos, total_final, estado, direccion_entrega, fecha_orden, created_at, updated_at) FROM stdin;
+COPY public.ordenes (id, numero_orden, usuario_id, subtotal_base, descuento_volumen, porcentaje_descuento_volumen, descuento_institucional, porcentaje_descuento_institucional, total_impuestos, total_final, estado, direccion_entrega, fecha_orden, created_at, updated_at, idempotency_key) FROM stdin;
 \.
 
 
 --
--- TOC entry 3714 (class 0 OID 17135)
--- Dependencies: 225
 -- Data for Name: perfiles_institucionales; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
@@ -1212,8 +1363,6 @@ COPY public.perfiles_institucionales (usuario_id, razon_social, documento_tribut
 
 
 --
--- TOC entry 3711 (class 0 OID 17106)
--- Dependencies: 222
 -- Data for Name: roles; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
@@ -1227,25 +1376,21 @@ COPY public.roles (id, nombre, descripcion, created_at) FROM stdin;
 
 
 --
--- TOC entry 3713 (class 0 OID 17116)
--- Dependencies: 224
 -- Data for Name: usuarios; Type: TABLE DATA; Schema: public; Owner: postgres
 --
 
 COPY public.usuarios (id, rol_id, email, password_hash, nombres, apellidos, telefono, activo, created_at, updated_at, deleted_at) FROM stdin;
 1	1	cliente_test_1794452757015@libreria.com	$2b$10$fvrVBaokcF4tNfSvOooLwut3YPGXrcii0JERKicDl3s1hMoYoUmAe	Juan	Pérez	5551234567	t	2026-11-11 21:05:57.271-06	2026-11-11 21:05:57.271-06	\N
-2	1	admin@email.com	$2b$10$xzAWmJ0.TC7s2Yhn8pg8tOU.GH3LLJh2K/48lvmT2goyr2eFjT6ei	Sebastian	Rodas	\N	t	2026-11-11 21:29:06.639-06	2026-11-11 21:29:06.639-06	\N
 3	2	admin@editorial.com	$2b$10$TRrH4S4h1DsZQAiU2kOx2ud/fYWPtFh1JpdInFHcACnoFShLJetAS	Carlos	Administrador	+502 5555-0001	t	2026-11-12 10:47:05.905-06	2026-11-12 10:47:05.905-06	\N
 4	3	asesor@editorial.com	$2b$10$TRrH4S4h1DsZQAiU2kOx2ud/fYWPtFh1JpdInFHcACnoFShLJetAS	Ana	Asesora Comercial	+502 5555-0002	t	2026-11-12 10:47:05.922-06	2026-11-12 10:47:05.922-06	\N
 5	4	minorista@editorial.com	$2b$10$TRrH4S4h1DsZQAiU2kOx2ud/fYWPtFh1JpdInFHcACnoFShLJetAS	Juan	Pérez Minorista	+502 5555-0003	t	2026-11-12 10:47:05.935-06	2026-11-12 10:47:05.935-06	\N
 6	5	institucional@colegio.edu	$2b$10$TRrH4S4h1DsZQAiU2kOx2ud/fYWPtFh1JpdInFHcACnoFShLJetAS	Licda. Beatriz	Méndez Institucional	+502 5555-0004	t	2026-11-12 10:47:05.945-06	2026-11-12 10:47:05.945-06	\N
 7	5	institucional2@universidad.edu	$2b$10$TRrH4S4h1DsZQAiU2kOx2ud/fYWPtFh1JpdInFHcACnoFShLJetAS	Dr. Roberto	Gómez Universidad	+502 5555-0005	t	2026-11-12 10:47:05.97-06	2026-11-12 10:47:05.97-06	\N
+2	2	admin@email.com	$2b$10$xzAWmJ0.TC7s2Yhn8pg8tOU.GH3LLJh2K/48lvmT2goyr2eFjT6ei	Sebastian	Rodas	\N	t	2026-11-11 21:29:06.639-06	2026-11-12 14:30:57.902383-06	\N
 \.
 
 
 --
--- TOC entry 3771 (class 0 OID 0)
--- Dependencies: 228
 -- Name: autores_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
@@ -1253,17 +1398,13 @@ SELECT pg_catalog.setval('public.autores_id_seq', 10, true);
 
 
 --
--- TOC entry 3772 (class 0 OID 0)
--- Dependencies: 243
 -- Name: carrito_items_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.carrito_items_id_seq', 1, false);
+SELECT pg_catalog.setval('public.carrito_items_id_seq', 1, true);
 
 
 --
--- TOC entry 3773 (class 0 OID 0)
--- Dependencies: 241
 -- Name: carritos_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
@@ -1271,8 +1412,6 @@ SELECT pg_catalog.setval('public.carritos_id_seq', 7, true);
 
 
 --
--- TOC entry 3774 (class 0 OID 0)
--- Dependencies: 239
 -- Name: catalogo_productos_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
@@ -1280,8 +1419,13 @@ SELECT pg_catalog.setval('public.catalogo_productos_id_seq', 33, true);
 
 
 --
--- TOC entry 3775 (class 0 OID 0)
--- Dependencies: 251
+-- Name: checkout_sesiones_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.checkout_sesiones_id_seq', 1, false);
+
+
+--
 -- Name: cotizaciones_propuestas_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
@@ -1289,8 +1433,6 @@ SELECT pg_catalog.setval('public.cotizaciones_propuestas_id_seq', 1, false);
 
 
 --
--- TOC entry 3776 (class 0 OID 0)
--- Dependencies: 249
 -- Name: cotizaciones_solicitudes_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
@@ -1298,8 +1440,6 @@ SELECT pg_catalog.setval('public.cotizaciones_solicitudes_id_seq', 1, false);
 
 
 --
--- TOC entry 3777 (class 0 OID 0)
--- Dependencies: 226
 -- Name: editoriales_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
@@ -1307,8 +1447,6 @@ SELECT pg_catalog.setval('public.editoriales_id_seq', 6, true);
 
 
 --
--- TOC entry 3778 (class 0 OID 0)
--- Dependencies: 232
 -- Name: formatos_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
@@ -1316,8 +1454,6 @@ SELECT pg_catalog.setval('public.formatos_id_seq', 4, true);
 
 
 --
--- TOC entry 3779 (class 0 OID 0)
--- Dependencies: 230
 -- Name: generos_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
@@ -1325,8 +1461,13 @@ SELECT pg_catalog.setval('public.generos_id_seq', 7, true);
 
 
 --
--- TOC entry 3780 (class 0 OID 0)
--- Dependencies: 234
+-- Name: idempotencias_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+--
+
+SELECT pg_catalog.setval('public.idempotencias_id_seq', 1, false);
+
+
+--
 -- Name: libros_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
@@ -1334,8 +1475,6 @@ SELECT pg_catalog.setval('public.libros_id_seq', 12, true);
 
 
 --
--- TOC entry 3781 (class 0 OID 0)
--- Dependencies: 247
 -- Name: orden_detalles_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
@@ -1343,8 +1482,6 @@ SELECT pg_catalog.setval('public.orden_detalles_id_seq', 1, false);
 
 
 --
--- TOC entry 3782 (class 0 OID 0)
--- Dependencies: 245
 -- Name: ordenes_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
@@ -1352,8 +1489,6 @@ SELECT pg_catalog.setval('public.ordenes_id_seq', 1, false);
 
 
 --
--- TOC entry 3783 (class 0 OID 0)
--- Dependencies: 221
 -- Name: roles_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
@@ -1361,8 +1496,6 @@ SELECT pg_catalog.setval('public.roles_id_seq', 5, true);
 
 
 --
--- TOC entry 3784 (class 0 OID 0)
--- Dependencies: 223
 -- Name: usuarios_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
@@ -1370,7 +1503,6 @@ SELECT pg_catalog.setval('public.usuarios_id_seq', 7, true);
 
 
 --
--- TOC entry 3457 (class 2606 OID 17178)
 -- Name: autores autores_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1379,7 +1511,6 @@ ALTER TABLE ONLY public.autores
 
 
 --
--- TOC entry 3505 (class 2606 OID 17319)
 -- Name: carrito_items carrito_items_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1388,7 +1519,6 @@ ALTER TABLE ONLY public.carrito_items
 
 
 --
--- TOC entry 3501 (class 2606 OID 17300)
 -- Name: carritos carritos_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1397,7 +1527,6 @@ ALTER TABLE ONLY public.carritos
 
 
 --
--- TOC entry 3503 (class 2606 OID 17302)
 -- Name: carritos carritos_usuario_id_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1406,7 +1535,6 @@ ALTER TABLE ONLY public.carritos
 
 
 --
--- TOC entry 3488 (class 2606 OID 17778)
 -- Name: catalogo_productos catalogo_productos_isbn_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1415,7 +1543,6 @@ ALTER TABLE ONLY public.catalogo_productos
 
 
 --
--- TOC entry 3490 (class 2606 OID 17780)
 -- Name: catalogo_productos catalogo_productos_isbn_key1; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1424,7 +1551,6 @@ ALTER TABLE ONLY public.catalogo_productos
 
 
 --
--- TOC entry 3492 (class 2606 OID 17782)
 -- Name: catalogo_productos catalogo_productos_isbn_key2; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1433,7 +1559,6 @@ ALTER TABLE ONLY public.catalogo_productos
 
 
 --
--- TOC entry 3494 (class 2606 OID 17276)
 -- Name: catalogo_productos catalogo_productos_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1442,7 +1567,30 @@ ALTER TABLE ONLY public.catalogo_productos
 
 
 --
--- TOC entry 3533 (class 2606 OID 17435)
+-- Name: checkout_sesiones checkout_sesiones_idempotency_key_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.checkout_sesiones
+    ADD CONSTRAINT checkout_sesiones_idempotency_key_key UNIQUE (idempotency_key);
+
+
+--
+-- Name: checkout_sesiones checkout_sesiones_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.checkout_sesiones
+    ADD CONSTRAINT checkout_sesiones_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: checkout_sesiones checkout_sesiones_token_sesion_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.checkout_sesiones
+    ADD CONSTRAINT checkout_sesiones_token_sesion_key UNIQUE (token_sesion);
+
+
+--
 -- Name: cotizaciones_propuestas cotizaciones_propuestas_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1451,7 +1599,6 @@ ALTER TABLE ONLY public.cotizaciones_propuestas
 
 
 --
--- TOC entry 3522 (class 2606 OID 17864)
 -- Name: cotizaciones_solicitudes cotizaciones_solicitudes_codigo_solicitud_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1460,7 +1607,6 @@ ALTER TABLE ONLY public.cotizaciones_solicitudes
 
 
 --
--- TOC entry 3524 (class 2606 OID 17866)
 -- Name: cotizaciones_solicitudes cotizaciones_solicitudes_codigo_solicitud_key1; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1469,7 +1615,6 @@ ALTER TABLE ONLY public.cotizaciones_solicitudes
 
 
 --
--- TOC entry 3526 (class 2606 OID 17868)
 -- Name: cotizaciones_solicitudes cotizaciones_solicitudes_codigo_solicitud_key2; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1478,7 +1623,6 @@ ALTER TABLE ONLY public.cotizaciones_solicitudes
 
 
 --
--- TOC entry 3528 (class 2606 OID 17401)
 -- Name: cotizaciones_solicitudes cotizaciones_solicitudes_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1487,7 +1631,6 @@ ALTER TABLE ONLY public.cotizaciones_solicitudes
 
 
 --
--- TOC entry 3449 (class 2606 OID 17735)
 -- Name: editoriales editoriales_nombre_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1496,7 +1639,6 @@ ALTER TABLE ONLY public.editoriales
 
 
 --
--- TOC entry 3451 (class 2606 OID 17737)
 -- Name: editoriales editoriales_nombre_key1; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1505,7 +1647,6 @@ ALTER TABLE ONLY public.editoriales
 
 
 --
--- TOC entry 3453 (class 2606 OID 17739)
 -- Name: editoriales editoriales_nombre_key2; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1514,7 +1655,6 @@ ALTER TABLE ONLY public.editoriales
 
 
 --
--- TOC entry 3455 (class 2606 OID 17164)
 -- Name: editoriales editoriales_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1523,7 +1663,6 @@ ALTER TABLE ONLY public.editoriales
 
 
 --
--- TOC entry 3467 (class 2606 OID 17743)
 -- Name: formatos formatos_codigo_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1532,7 +1671,6 @@ ALTER TABLE ONLY public.formatos
 
 
 --
--- TOC entry 3469 (class 2606 OID 17745)
 -- Name: formatos formatos_codigo_key1; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1541,7 +1679,6 @@ ALTER TABLE ONLY public.formatos
 
 
 --
--- TOC entry 3471 (class 2606 OID 17747)
 -- Name: formatos formatos_codigo_key2; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1550,7 +1687,6 @@ ALTER TABLE ONLY public.formatos
 
 
 --
--- TOC entry 3473 (class 2606 OID 17201)
 -- Name: formatos formatos_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1559,7 +1695,6 @@ ALTER TABLE ONLY public.formatos
 
 
 --
--- TOC entry 3459 (class 2606 OID 17751)
 -- Name: generos generos_nombre_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1568,7 +1703,6 @@ ALTER TABLE ONLY public.generos
 
 
 --
--- TOC entry 3461 (class 2606 OID 17753)
 -- Name: generos generos_nombre_key1; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1577,7 +1711,6 @@ ALTER TABLE ONLY public.generos
 
 
 --
--- TOC entry 3463 (class 2606 OID 17755)
 -- Name: generos generos_nombre_key2; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1586,7 +1719,6 @@ ALTER TABLE ONLY public.generos
 
 
 --
--- TOC entry 3465 (class 2606 OID 17190)
 -- Name: generos generos_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1595,7 +1727,22 @@ ALTER TABLE ONLY public.generos
 
 
 --
--- TOC entry 3480 (class 2606 OID 17223)
+-- Name: idempotencias idempotencias_idempotency_key_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.idempotencias
+    ADD CONSTRAINT idempotencias_idempotency_key_key UNIQUE (idempotency_key);
+
+
+--
+-- Name: idempotencias idempotencias_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.idempotencias
+    ADD CONSTRAINT idempotencias_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: libros_autores libros_autores_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1604,7 +1751,6 @@ ALTER TABLE ONLY public.libros_autores
 
 
 --
--- TOC entry 3486 (class 2606 OID 17253)
 -- Name: libros_editoriales libros_editoriales_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1613,7 +1759,6 @@ ALTER TABLE ONLY public.libros_editoriales
 
 
 --
--- TOC entry 3483 (class 2606 OID 17238)
 -- Name: libros_generos libros_generos_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1622,7 +1767,6 @@ ALTER TABLE ONLY public.libros_generos
 
 
 --
--- TOC entry 3477 (class 2606 OID 17216)
 -- Name: libros libros_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1631,7 +1775,6 @@ ALTER TABLE ONLY public.libros
 
 
 --
--- TOC entry 3520 (class 2606 OID 17377)
 -- Name: orden_detalles orden_detalles_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1640,7 +1783,14 @@ ALTER TABLE ONLY public.orden_detalles
 
 
 --
--- TOC entry 3511 (class 2606 OID 17816)
+-- Name: ordenes ordenes_idempotency_key_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.ordenes
+    ADD CONSTRAINT ordenes_idempotency_key_key UNIQUE (idempotency_key);
+
+
+--
 -- Name: ordenes ordenes_numero_orden_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1649,7 +1799,6 @@ ALTER TABLE ONLY public.ordenes
 
 
 --
--- TOC entry 3513 (class 2606 OID 17818)
 -- Name: ordenes ordenes_numero_orden_key1; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1658,7 +1807,6 @@ ALTER TABLE ONLY public.ordenes
 
 
 --
--- TOC entry 3515 (class 2606 OID 17820)
 -- Name: ordenes ordenes_numero_orden_key2; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1667,7 +1815,6 @@ ALTER TABLE ONLY public.ordenes
 
 
 --
--- TOC entry 3517 (class 2606 OID 17358)
 -- Name: ordenes ordenes_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1676,7 +1823,6 @@ ALTER TABLE ONLY public.ordenes
 
 
 --
--- TOC entry 3441 (class 2606 OID 17724)
 -- Name: perfiles_institucionales perfiles_institucionales_documento_tributario_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1685,7 +1831,6 @@ ALTER TABLE ONLY public.perfiles_institucionales
 
 
 --
--- TOC entry 3443 (class 2606 OID 17726)
 -- Name: perfiles_institucionales perfiles_institucionales_documento_tributario_key1; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1694,7 +1839,6 @@ ALTER TABLE ONLY public.perfiles_institucionales
 
 
 --
--- TOC entry 3445 (class 2606 OID 17728)
 -- Name: perfiles_institucionales perfiles_institucionales_documento_tributario_key2; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1703,7 +1847,6 @@ ALTER TABLE ONLY public.perfiles_institucionales
 
 
 --
--- TOC entry 3447 (class 2606 OID 17145)
 -- Name: perfiles_institucionales perfiles_institucionales_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1712,7 +1855,6 @@ ALTER TABLE ONLY public.perfiles_institucionales
 
 
 --
--- TOC entry 3425 (class 2606 OID 17701)
 -- Name: roles roles_nombre_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1721,7 +1863,6 @@ ALTER TABLE ONLY public.roles
 
 
 --
--- TOC entry 3427 (class 2606 OID 17703)
 -- Name: roles roles_nombre_key1; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1730,7 +1871,6 @@ ALTER TABLE ONLY public.roles
 
 
 --
--- TOC entry 3429 (class 2606 OID 17705)
 -- Name: roles roles_nombre_key2; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1739,7 +1879,6 @@ ALTER TABLE ONLY public.roles
 
 
 --
--- TOC entry 3431 (class 2606 OID 17112)
 -- Name: roles roles_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1748,7 +1887,6 @@ ALTER TABLE ONLY public.roles
 
 
 --
--- TOC entry 3507 (class 2606 OID 17321)
 -- Name: carrito_items uq_carrito_producto; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1757,7 +1895,6 @@ ALTER TABLE ONLY public.carrito_items
 
 
 --
--- TOC entry 3499 (class 2606 OID 17280)
 -- Name: catalogo_productos uq_libro_formato; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1766,7 +1903,6 @@ ALTER TABLE ONLY public.catalogo_productos
 
 
 --
--- TOC entry 3433 (class 2606 OID 17714)
 -- Name: usuarios usuarios_email_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1775,7 +1911,6 @@ ALTER TABLE ONLY public.usuarios
 
 
 --
--- TOC entry 3435 (class 2606 OID 17716)
 -- Name: usuarios usuarios_email_key1; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1784,7 +1919,6 @@ ALTER TABLE ONLY public.usuarios
 
 
 --
--- TOC entry 3437 (class 2606 OID 17718)
 -- Name: usuarios usuarios_email_key2; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1793,7 +1927,6 @@ ALTER TABLE ONLY public.usuarios
 
 
 --
--- TOC entry 3439 (class 2606 OID 17126)
 -- Name: usuarios usuarios_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -1802,7 +1935,6 @@ ALTER TABLE ONLY public.usuarios
 
 
 --
--- TOC entry 3495 (class 1259 OID 17783)
 -- Name: idx_catalogo_isbn; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -1810,7 +1942,6 @@ CREATE INDEX idx_catalogo_isbn ON public.catalogo_productos USING btree (isbn);
 
 
 --
--- TOC entry 3496 (class 1259 OID 17793)
 -- Name: idx_catalogo_libro_formato; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -1818,7 +1949,6 @@ CREATE INDEX idx_catalogo_libro_formato ON public.catalogo_productos USING btree
 
 
 --
--- TOC entry 3497 (class 1259 OID 17794)
 -- Name: idx_catalogo_precio; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -1826,7 +1956,13 @@ CREATE INDEX idx_catalogo_precio ON public.catalogo_productos USING btree (preci
 
 
 --
--- TOC entry 3529 (class 1259 OID 17459)
+-- Name: idx_checkout_sesiones_usuario; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_checkout_sesiones_usuario ON public.checkout_sesiones USING btree (usuario_id, estado);
+
+
+--
 -- Name: idx_cotizaciones_asesor; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -1834,7 +1970,6 @@ CREATE INDEX idx_cotizaciones_asesor ON public.cotizaciones_solicitudes USING bt
 
 
 --
--- TOC entry 3530 (class 1259 OID 17460)
 -- Name: idx_cotizaciones_cliente; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -1842,7 +1977,6 @@ CREATE INDEX idx_cotizaciones_cliente ON public.cotizaciones_solicitudes USING b
 
 
 --
--- TOC entry 3531 (class 1259 OID 17889)
 -- Name: idx_cotizaciones_estado_fecha; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -1850,7 +1984,13 @@ CREATE INDEX idx_cotizaciones_estado_fecha ON public.cotizaciones_solicitudes US
 
 
 --
--- TOC entry 3474 (class 1259 OID 17762)
+-- Name: idx_idempotencias_key; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_idempotencias_key ON public.idempotencias USING btree (idempotency_key);
+
+
+--
 -- Name: idx_libros_anio; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -1858,7 +1998,6 @@ CREATE INDEX idx_libros_anio ON public.libros USING btree (anio_edicion) WHERE (
 
 
 --
--- TOC entry 3478 (class 1259 OID 17452)
 -- Name: idx_libros_autores_autor; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -1866,7 +2005,6 @@ CREATE INDEX idx_libros_autores_autor ON public.libros_autores USING btree (auto
 
 
 --
--- TOC entry 3484 (class 1259 OID 17454)
 -- Name: idx_libros_editoriales_editorial; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -1874,7 +2012,6 @@ CREATE INDEX idx_libros_editoriales_editorial ON public.libros_editoriales USING
 
 
 --
--- TOC entry 3481 (class 1259 OID 17453)
 -- Name: idx_libros_generos_genero; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -1882,7 +2019,6 @@ CREATE INDEX idx_libros_generos_genero ON public.libros_generos USING btree (gen
 
 
 --
--- TOC entry 3475 (class 1259 OID 17761)
 -- Name: idx_libros_titulo; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -1890,7 +2026,6 @@ CREATE INDEX idx_libros_titulo ON public.libros USING btree (titulo) WHERE (dele
 
 
 --
--- TOC entry 3518 (class 1259 OID 17457)
 -- Name: idx_orden_detalles_orden; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -1898,7 +2033,6 @@ CREATE INDEX idx_orden_detalles_orden ON public.orden_detalles USING btree (orde
 
 
 --
--- TOC entry 3508 (class 1259 OID 17845)
 -- Name: idx_ordenes_estado; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -1906,7 +2040,6 @@ CREATE INDEX idx_ordenes_estado ON public.ordenes USING btree (estado);
 
 
 --
--- TOC entry 3509 (class 1259 OID 17847)
 -- Name: idx_ordenes_usuario_fecha; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -1914,7 +2047,6 @@ CREATE INDEX idx_ordenes_usuario_fecha ON public.ordenes USING btree (usuario_id
 
 
 --
--- TOC entry 3558 (class 2620 OID 17179)
 -- Name: autores trg_autores_updated_at; Type: TRIGGER; Schema: public; Owner: postgres
 --
 
@@ -1922,7 +2054,6 @@ CREATE TRIGGER trg_autores_updated_at BEFORE UPDATE ON public.autores FOR EACH R
 
 
 --
--- TOC entry 3563 (class 2620 OID 17332)
 -- Name: carrito_items trg_carrito_items_updated_at; Type: TRIGGER; Schema: public; Owner: postgres
 --
 
@@ -1930,7 +2061,6 @@ CREATE TRIGGER trg_carrito_items_updated_at BEFORE UPDATE ON public.carrito_item
 
 
 --
--- TOC entry 3562 (class 2620 OID 17308)
 -- Name: carritos trg_carritos_updated_at; Type: TRIGGER; Schema: public; Owner: postgres
 --
 
@@ -1938,7 +2068,6 @@ CREATE TRIGGER trg_carritos_updated_at BEFORE UPDATE ON public.carritos FOR EACH
 
 
 --
--- TOC entry 3561 (class 2620 OID 17291)
 -- Name: catalogo_productos trg_catalogo_productos_updated_at; Type: TRIGGER; Schema: public; Owner: postgres
 --
 
@@ -1946,7 +2075,6 @@ CREATE TRIGGER trg_catalogo_productos_updated_at BEFORE UPDATE ON public.catalog
 
 
 --
--- TOC entry 3566 (class 2620 OID 17446)
 -- Name: cotizaciones_propuestas trg_cotizaciones_propuestas_updated_at; Type: TRIGGER; Schema: public; Owner: postgres
 --
 
@@ -1954,7 +2082,6 @@ CREATE TRIGGER trg_cotizaciones_propuestas_updated_at BEFORE UPDATE ON public.co
 
 
 --
--- TOC entry 3565 (class 2620 OID 17419)
 -- Name: cotizaciones_solicitudes trg_cotizaciones_solicitudes_updated_at; Type: TRIGGER; Schema: public; Owner: postgres
 --
 
@@ -1962,7 +2089,6 @@ CREATE TRIGGER trg_cotizaciones_solicitudes_updated_at BEFORE UPDATE ON public.c
 
 
 --
--- TOC entry 3557 (class 2620 OID 17167)
 -- Name: editoriales trg_editoriales_updated_at; Type: TRIGGER; Schema: public; Owner: postgres
 --
 
@@ -1970,7 +2096,6 @@ CREATE TRIGGER trg_editoriales_updated_at BEFORE UPDATE ON public.editoriales FO
 
 
 --
--- TOC entry 3559 (class 2620 OID 17193)
 -- Name: generos trg_generos_updated_at; Type: TRIGGER; Schema: public; Owner: postgres
 --
 
@@ -1978,7 +2103,6 @@ CREATE TRIGGER trg_generos_updated_at BEFORE UPDATE ON public.generos FOR EACH R
 
 
 --
--- TOC entry 3560 (class 2620 OID 17217)
 -- Name: libros trg_libros_updated_at; Type: TRIGGER; Schema: public; Owner: postgres
 --
 
@@ -1986,7 +2110,6 @@ CREATE TRIGGER trg_libros_updated_at BEFORE UPDATE ON public.libros FOR EACH ROW
 
 
 --
--- TOC entry 3564 (class 2620 OID 17366)
 -- Name: ordenes trg_ordenes_updated_at; Type: TRIGGER; Schema: public; Owner: postgres
 --
 
@@ -1994,7 +2117,6 @@ CREATE TRIGGER trg_ordenes_updated_at BEFORE UPDATE ON public.ordenes FOR EACH R
 
 
 --
--- TOC entry 3556 (class 2620 OID 17153)
 -- Name: perfiles_institucionales trg_perfiles_institucionales_updated_at; Type: TRIGGER; Schema: public; Owner: postgres
 --
 
@@ -2002,7 +2124,6 @@ CREATE TRIGGER trg_perfiles_institucionales_updated_at BEFORE UPDATE ON public.p
 
 
 --
--- TOC entry 3555 (class 2620 OID 17134)
 -- Name: usuarios trg_usuarios_updated_at; Type: TRIGGER; Schema: public; Owner: postgres
 --
 
@@ -2010,7 +2131,6 @@ CREATE TRIGGER trg_usuarios_updated_at BEFORE UPDATE ON public.usuarios FOR EACH
 
 
 --
--- TOC entry 3545 (class 2606 OID 17800)
 -- Name: carrito_items carrito_items_carrito_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -2019,7 +2139,6 @@ ALTER TABLE ONLY public.carrito_items
 
 
 --
--- TOC entry 3546 (class 2606 OID 17805)
 -- Name: carrito_items carrito_items_producto_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -2028,7 +2147,6 @@ ALTER TABLE ONLY public.carrito_items
 
 
 --
--- TOC entry 3544 (class 2606 OID 17795)
 -- Name: carritos carritos_usuario_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -2037,7 +2155,6 @@ ALTER TABLE ONLY public.carritos
 
 
 --
--- TOC entry 3542 (class 2606 OID 17770)
 -- Name: catalogo_productos catalogo_productos_formato_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -2046,7 +2163,6 @@ ALTER TABLE ONLY public.catalogo_productos
 
 
 --
--- TOC entry 3543 (class 2606 OID 17765)
 -- Name: catalogo_productos catalogo_productos_libro_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -2055,7 +2171,22 @@ ALTER TABLE ONLY public.catalogo_productos
 
 
 --
--- TOC entry 3553 (class 2606 OID 17895)
+-- Name: checkout_sesiones checkout_sesiones_orden_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.checkout_sesiones
+    ADD CONSTRAINT checkout_sesiones_orden_id_fkey FOREIGN KEY (orden_id) REFERENCES public.ordenes(id) ON UPDATE CASCADE ON DELETE SET NULL;
+
+
+--
+-- Name: checkout_sesiones checkout_sesiones_usuario_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.checkout_sesiones
+    ADD CONSTRAINT checkout_sesiones_usuario_id_fkey FOREIGN KEY (usuario_id) REFERENCES public.usuarios(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
 -- Name: cotizaciones_propuestas cotizaciones_propuestas_asesor_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -2064,7 +2195,6 @@ ALTER TABLE ONLY public.cotizaciones_propuestas
 
 
 --
--- TOC entry 3554 (class 2606 OID 17890)
 -- Name: cotizaciones_propuestas cotizaciones_propuestas_solicitud_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -2073,7 +2203,6 @@ ALTER TABLE ONLY public.cotizaciones_propuestas
 
 
 --
--- TOC entry 3550 (class 2606 OID 17884)
 -- Name: cotizaciones_solicitudes cotizaciones_solicitudes_asesor_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -2082,7 +2211,6 @@ ALTER TABLE ONLY public.cotizaciones_solicitudes
 
 
 --
--- TOC entry 3551 (class 2606 OID 17869)
 -- Name: cotizaciones_solicitudes cotizaciones_solicitudes_cliente_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -2091,7 +2219,6 @@ ALTER TABLE ONLY public.cotizaciones_solicitudes
 
 
 --
--- TOC entry 3552 (class 2606 OID 17874)
 -- Name: cotizaciones_solicitudes cotizaciones_solicitudes_libro_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -2100,7 +2227,6 @@ ALTER TABLE ONLY public.cotizaciones_solicitudes
 
 
 --
--- TOC entry 3536 (class 2606 OID 17229)
 -- Name: libros_autores fk_la_autor; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -2109,7 +2235,6 @@ ALTER TABLE ONLY public.libros_autores
 
 
 --
--- TOC entry 3537 (class 2606 OID 17224)
 -- Name: libros_autores fk_la_libro; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -2118,7 +2243,6 @@ ALTER TABLE ONLY public.libros_autores
 
 
 --
--- TOC entry 3540 (class 2606 OID 17259)
 -- Name: libros_editoriales fk_le_editorial; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -2127,7 +2251,6 @@ ALTER TABLE ONLY public.libros_editoriales
 
 
 --
--- TOC entry 3541 (class 2606 OID 17254)
 -- Name: libros_editoriales fk_le_libro; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -2136,7 +2259,6 @@ ALTER TABLE ONLY public.libros_editoriales
 
 
 --
--- TOC entry 3538 (class 2606 OID 17244)
 -- Name: libros_generos fk_lg_genero; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -2145,7 +2267,6 @@ ALTER TABLE ONLY public.libros_generos
 
 
 --
--- TOC entry 3539 (class 2606 OID 17239)
 -- Name: libros_generos fk_lg_libro; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -2154,7 +2275,6 @@ ALTER TABLE ONLY public.libros_generos
 
 
 --
--- TOC entry 3535 (class 2606 OID 17148)
 -- Name: perfiles_institucionales fk_perfiles_usuarios; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -2163,7 +2283,22 @@ ALTER TABLE ONLY public.perfiles_institucionales
 
 
 --
--- TOC entry 3548 (class 2606 OID 17848)
+-- Name: idempotencias idempotencias_orden_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.idempotencias
+    ADD CONSTRAINT idempotencias_orden_id_fkey FOREIGN KEY (orden_id) REFERENCES public.ordenes(id) ON DELETE SET NULL;
+
+
+--
+-- Name: idempotencias idempotencias_usuario_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.idempotencias
+    ADD CONSTRAINT idempotencias_usuario_id_fkey FOREIGN KEY (usuario_id) REFERENCES public.usuarios(id) ON DELETE CASCADE;
+
+
+--
 -- Name: orden_detalles orden_detalles_orden_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -2172,7 +2307,6 @@ ALTER TABLE ONLY public.orden_detalles
 
 
 --
--- TOC entry 3549 (class 2606 OID 17853)
 -- Name: orden_detalles orden_detalles_producto_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -2181,7 +2315,6 @@ ALTER TABLE ONLY public.orden_detalles
 
 
 --
--- TOC entry 3547 (class 2606 OID 17821)
 -- Name: ordenes ordenes_usuario_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -2190,7 +2323,6 @@ ALTER TABLE ONLY public.ordenes
 
 
 --
--- TOC entry 3534 (class 2606 OID 17706)
 -- Name: usuarios usuarios_rol_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -2198,11 +2330,9 @@ ALTER TABLE ONLY public.usuarios
     ADD CONSTRAINT usuarios_rol_id_fkey FOREIGN KEY (rol_id) REFERENCES public.roles(id) ON UPDATE CASCADE ON DELETE CASCADE;
 
 
--- Completed on 2026-11-12 10:47:48 CST
-
 --
 -- PostgreSQL database dump complete
 --
 
-\unrestrict pd7oYpv7wfoaIi7owT32hUrGGrl0mO4C7Du79mvq2vfKsXnJOEywUWdEDQRtPDr
+\unrestrict ZXm5TvXKgTdZCSWbYU1EXJNxfPksq37eeYcXOBKKH10YPgYg8UFSbZcNdeOQpyz
 

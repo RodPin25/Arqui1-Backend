@@ -18,6 +18,7 @@ import { OrdenDetalle } from "./Orden_Detalle.js";
 import { CotizacionSolicitud } from "./Cotizacion_Solicitud.js";
 import { CotizacionPropuesta } from "./Cotizacion_Propuesta.js";
 import { CheckoutSesion } from "./Checkout_Sesiones.js";
+import { Idempotencia } from "./Idempotencias.js";
 
 export {
   sequelize,
@@ -40,4 +41,5 @@ export {
   CotizacionSolicitud,
   CotizacionPropuesta,
   CheckoutSesion,
+  Idempotencia,
 };

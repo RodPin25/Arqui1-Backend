@@ -1,3 +1,4 @@
+import { randomUUID } from "crypto";
 import {
   sequelize,
   Orden,
@@ -9,6 +10,7 @@ import {
   Formatos,
   Usuario,
   Rol,
+  CheckoutSesion,
 } from "../models/index.js";
 import {
   generarIdempotencyKey,
@@ -111,9 +113,49 @@ export const iniciarCheckout = async (req, res) => {
     const ahora = Date.now();
     const expiraEn = new Date(ahora + DURACION_CHECKOUT_MS);
     const idempotencyKey = generarIdempotencyKey(usuarioId, carrito.id, ahora);
+    const tokenSesion = `cs_${randomUUID().replace(/-/g, "")}`;
+
+    // Desactivar cualquier sesión iniciada previa del usuario en base de datos
+    await CheckoutSesion.update(
+      { estado: "cancelada" },
+      { where: { usuario_id: usuarioId, estado: "iniciada" } }
+    );
+
+    const totalUnidades = itemsParaCalculo.reduce((acc, it) => acc + it.cantidad, 0);
+    const detallesItems = carrito.items.map((it) => ({
+      producto_id: it.producto_id,
+      isbn: it.producto?.isbn,
+      titulo: it.producto?.libro?.titulo,
+      cantidad: it.cantidad,
+      precio_unitario: parseFloat(it.producto?.precio_base || 0),
+      subtotal: +(parseFloat(it.producto?.precio_base || 0) * it.cantidad).toFixed(2),
+    }));
+
+    const descuentoTotal = +(
+      parseFloat(liquidacion.descuento_volumen || 0) +
+      parseFloat(liquidacion.descuento_institucional || 0)
+    ).toFixed(2);
+
+    // Persistir la sesión en la base de datos (PostgreSQL)
+    const sesionDb = await CheckoutSesion.create({
+      usuario_id: usuarioId,
+      token_sesion: tokenSesion,
+      idempotency_key: idempotencyKey,
+      expira_en: expiraEn,
+      estado: "iniciada",
+      subtotal_base: liquidacion.subtotal_base,
+      descuento_total: descuentoTotal,
+      total_impuestos: liquidacion.total_impuestos,
+      total_final: liquidacion.total_final,
+      total_unidades: totalUnidades,
+      detalles_items: detallesItems,
+      desglose_reglas: liquidacion,
+    });
 
     // 5. Registrar sesión de checkout activa con limitador de 10 minutos
     const sesionCheckout = {
+      id: sesionDb.id,
+      token_sesion: tokenSesion,
       usuario_id: usuarioId,
       carrito_id: carrito.id,
       idempotency_key: idempotencyKey,
@@ -134,7 +176,7 @@ export const iniciarCheckout = async (req, res) => {
       temporizadoresCheckout.delete(usuarioId);
     }
 
-    const intervalId = setInterval(() => {
+    const intervalId = setInterval(async () => {
       const sesion = sesionesCheckoutActivas.get(usuarioId);
       if (!sesion || sesion.estado !== "iniciada") {
         clearInterval(intervalId);
@@ -150,6 +192,12 @@ export const iniciarCheckout = async (req, res) => {
         sesionesCheckoutActivas.delete(usuarioId);
         clearInterval(intervalId);
         temporizadoresCheckout.delete(usuarioId);
+
+        // Actualizar en base de datos estado a expirada
+        await CheckoutSesion.update(
+          { estado: "expirada" },
+          { where: { id: sesion.id, estado: "iniciada" } }
+        ).catch(() => {});
 
         // Notificar inmediatamente por WebSocket la expiración de los 10 minutos
         emitirExpiracionCheckout(usuarioId, {
@@ -178,6 +226,7 @@ export const iniciarCheckout = async (req, res) => {
       ok: true,
       mensaje: "Sesión de checkout iniciada. Tiene 10 minutos para confirmar su compra.",
       data: {
+        token_sesion: tokenSesion,
         idempotency_key: idempotencyKey,
         iniciado_en: sesionCheckout.iniciado_en,
         expira_en: expiraEn.toISOString(),
@@ -204,9 +253,20 @@ export const iniciarCheckout = async (req, res) => {
 export const obtenerEstadoCheckout = async (req, res) => {
   try {
     const usuarioId = req.usuario.id;
-    const sesion = sesionesCheckoutActivas.get(usuarioId);
 
-    if (!sesion || sesion.estado !== "iniciada") {
+    // 1. Consultar persistencia en base de datos
+    let sesionDb = await CheckoutSesion.findOne({
+      where: { usuario_id: usuarioId, estado: "iniciada" },
+      order: [["created_at", "DESC"]],
+    });
+
+    if (!sesionDb) {
+      sesionesCheckoutActivas.delete(usuarioId);
+      if (temporizadoresCheckout.has(usuarioId)) {
+        clearInterval(temporizadoresCheckout.get(usuarioId));
+        temporizadoresCheckout.delete(usuarioId);
+      }
+
       return res.status(200).json({
         ok: false,
         activa: false,
@@ -217,13 +277,9 @@ export const obtenerEstadoCheckout = async (req, res) => {
       });
     }
 
-    const ahora = Date.now();
-    const diffMs = new Date(sesion.expira_en).getTime() - ahora;
-    const tiempoRestanteSegundos = Math.max(0, Math.floor(diffMs / 1000));
-
-    // Si transcurrieron los 10 minutos -> EXPIRA AUTOMÁTICAMENTE
-    if (tiempoRestanteSegundos <= 0) {
-      sesion.estado = "expirada";
+    // 2. Si transcurrieron los 10 minutos -> EXPIRA AUTOMÁTICAMENTE
+    if (sesionDb.estaExpirada()) {
+      await sesionDb.update({ estado: "expirada" });
       sesionesCheckoutActivas.delete(usuarioId);
 
       if (temporizadoresCheckout.has(usuarioId)) {
@@ -245,14 +301,18 @@ export const obtenerEstadoCheckout = async (req, res) => {
       });
     }
 
+    const segundosRestantes = sesionDb.tiempoRestanteSegundos();
+
     return res.status(200).json({
       ok: true,
       activa: true,
       expiro: false,
-      tiempo_restante_segundos: tiempoRestanteSegundos,
-      expira_en: sesion.expira_en,
-      idempotency_key: sesion.idempotency_key,
-      liquidacion: sesion.liquidacion,
+      token_sesion: sesionDb.token_sesion,
+      idempotency_key: sesionDb.idempotency_key,
+      tiempo_restante_segundos: segundosRestantes,
+      expira_en: sesionDb.expira_en,
+      liquidacion: sesionDb.desglose_reglas,
+      items: sesionDb.detalles_items,
     });
   } catch (error) {
     return res.status(500).json({
@@ -269,6 +329,13 @@ export const obtenerEstadoCheckout = async (req, res) => {
 export const cancelarCheckout = async (req, res) => {
   try {
     const usuarioId = req.usuario.id;
+
+    // Actualizar en base de datos
+    await CheckoutSesion.update(
+      { estado: "cancelada" },
+      { where: { usuario_id: usuarioId, estado: "iniciada" } }
+    );
+
     sesionesCheckoutActivas.delete(usuarioId);
 
     if (temporizadoresCheckout.has(usuarioId)) {
@@ -319,7 +386,7 @@ export const crearOrden = async (req, res) => {
   // 1. CONTROL DE IDEMPOTENCIA
   // =========================================================================
   if (idempotencyKey) {
-    const registroPrevio = obtenerRegistroIdempotente(idempotencyKey);
+    const registroPrevio = await obtenerRegistroIdempotente(idempotencyKey);
     if (registroPrevio && registroPrevio.data) {
       res.setHeader("X-Idempotency-Replay", "true");
       return res.status(200).json({
@@ -343,7 +410,7 @@ export const crearOrden = async (req, res) => {
 
     if (ordenExistente) {
       res.setHeader("X-Idempotency-Replay", "true");
-      guardarRegistroIdempotente(idempotencyKey, { orden: ordenExistente });
+      await guardarRegistroIdempotente(idempotencyKey, { orden: ordenExistente }, usuarioId);
       return res.status(200).json({
         ok: true,
         idempotente: true,
@@ -354,16 +421,25 @@ export const crearOrden = async (req, res) => {
   }
 
   // =========================================================================
-  // 2. LIMITADOR DE TIEMPO (10 MINUTOS MÁXIMO)
+  // 2. LIMITADOR DE TIEMPO (10 MINUTOS MÁXIMO) CON PERSISTENCIA EN BD
   // =========================================================================
-  let sesionActiva = sesionesCheckoutActivas.get(usuarioId);
+  let sesionDb = null;
+  if (idempotencyKey) {
+    sesionDb = await CheckoutSesion.findOne({
+      where: { idempotency_key: idempotencyKey },
+    });
+  }
 
-  if (sesionActiva) {
-    const ahora = Date.now();
-    const tiempoExpiracion = new Date(sesionActiva.expira_en).getTime();
+  if (!sesionDb) {
+    sesionDb = await CheckoutSesion.findOne({
+      where: { usuario_id: usuarioId, estado: "iniciada" },
+      order: [["created_at", "DESC"]],
+    });
+  }
 
-    if (ahora > tiempoExpiracion || sesionActiva.estado === "expirada") {
-      sesionActiva.estado = "expirada";
+  if (sesionDb) {
+    if (sesionDb.estaExpirada() || sesionDb.estado === "expirada") {
+      await sesionDb.update({ estado: "expirada" });
       sesionesCheckoutActivas.delete(usuarioId);
 
       if (temporizadoresCheckout.has(usuarioId)) {
@@ -496,6 +572,17 @@ export const crearOrden = async (req, res) => {
       transaction,
     });
 
+    // Actualizar sesión de checkout en base de datos si existe
+    if (sesionDb) {
+      await sesionDb.update(
+        {
+          estado: "completada",
+          orden_id: nuevaOrden.id,
+        },
+        { transaction }
+      );
+    }
+
     await transaction.commit();
 
     // Detener el temporizador de WebSocket
@@ -504,10 +591,7 @@ export const crearOrden = async (req, res) => {
       temporizadoresCheckout.delete(usuarioId);
     }
 
-    if (sesionActiva) {
-      sesionActiva.estado = "completada";
-      sesionesCheckoutActivas.delete(usuarioId);
-    }
+    sesionesCheckoutActivas.delete(usuarioId);
 
     const ordenCompleta = await Orden.findByPk(nuevaOrden.id, {
       include: [
@@ -534,7 +618,7 @@ export const crearOrden = async (req, res) => {
       idempotency_key: finalIdempotencyKey,
     };
 
-    guardarRegistroIdempotente(finalIdempotencyKey, respuestaFinal);
+    await guardarRegistroIdempotente(finalIdempotencyKey, respuestaFinal, usuarioId);
 
     // =========================================================================
     // 4. NOTIFICACIONES EN VIVO POR WEBSOCKET

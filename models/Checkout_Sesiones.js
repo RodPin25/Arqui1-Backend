@@ -44,7 +44,7 @@ CheckoutSesion.init(
       unique: true,
     },
     idempotency_key: {
-      type: DataTypes.STRING(100),
+      type: DataTypes.STRING(255),
       allowNull: false,
       unique: true,
     },
