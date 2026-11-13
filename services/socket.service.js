@@ -3,6 +3,9 @@ import jwt from "jsonwebtoken";
 
 let io = null;
 
+const ROLES_BANDEJA = new Set(["ADMIN", "ADMINISTRADOR", "ASESOR", "ASESOR_VENTAS"]);
+const esAsesorOAdmin = (rol) => ROLES_BANDEJA.has(String(rol || "").toUpperCase());
+
 /**
  * Inicializa el servidor WebSocket adjunto al servidor HTTP
  * @param {import("http").Server} httpServer
@@ -45,6 +48,9 @@ export const initSocketServer = (httpServer) => {
     if (socket.usuario?.id) {
       socket.join(`usuario:${socket.usuario.id}`);
       socket.join(`checkout:${socket.usuario.id}`);
+      if (esAsesorOAdmin(socket.usuario.rol)) {
+        socket.join("cotizaciones:bandeja");
+      }
     }
 
     // 1. Unirse a la sala de Checkout para recibir el temporizador de 10 min en vivo
@@ -67,6 +73,19 @@ export const initSocketServer = (httpServer) => {
       socket.emit("reporteria:conectado", {
         ok: true,
         mensaje: "Conectado a la sala de Reportería y Métricas Comerciales en Vivo",
+        timestamp: new Date().toISOString(),
+      });
+    });
+
+    // 3. Unirse a la sala de cotizaciones en tiempo real
+    socket.on("join:cotizaciones", () => {
+      if (!socket.usuario?.id) return;
+      socket.join(`usuario:${socket.usuario.id}`);
+      if (esAsesorOAdmin(socket.usuario.rol)) {
+        socket.join("cotizaciones:bandeja");
+      }
+      socket.emit("cotizaciones:conectado", {
+        ok: true,
         timestamp: new Date().toISOString(),
       });
     });
@@ -168,4 +187,38 @@ export const emitirNuevaVenta = (nuevaVenta) => {
     timestamp: new Date().toISOString(),
     venta: nuevaVenta,
   });
+};
+
+/**
+ * Emite una nueva solicitud de cotización a la bandeja de asesores/admins y al cliente dueño
+ */
+export const emitirNuevaSolicitudCotizacion = (solicitud) => {
+  if (!io || !solicitud) return;
+  const payload = {
+    ok: true,
+    tipo: "nueva",
+    solicitud,
+    timestamp: Date.now(),
+  };
+  io.to("cotizaciones:bandeja").emit("cotizacion:nueva", payload);
+  if (solicitud.cliente_id) {
+    io.to(`usuario:${solicitud.cliente_id}`).emit("cotizacion:nueva", payload);
+  }
+};
+
+/**
+ * Emite actualización de una solicitud de cotización a la bandeja y al cliente dueño
+ */
+export const emitirActualizacionCotizacion = (solicitud, tipo = "actualizada") => {
+  if (!io || !solicitud) return;
+  const payload = {
+    ok: true,
+    tipo,
+    solicitud,
+    timestamp: Date.now(),
+  };
+  io.to("cotizaciones:bandeja").emit("cotizacion:actualizada", payload);
+  if (solicitud.cliente_id) {
+    io.to(`usuario:${solicitud.cliente_id}`).emit("cotizacion:actualizada", payload);
+  }
 };

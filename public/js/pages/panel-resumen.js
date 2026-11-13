@@ -3,15 +3,16 @@
 import { h, mount, icon, money, fecha, nombreCompleto } from "../core/dom.js";
 import { iniciarPagina } from "../core/layout.js";
 import { ordenesApi, cotizacionesApi, authApi, catalogoApi } from "../core/api.js";
+import { escucharEvento } from "../core/socket.js";
 import { usuario } from "../core/session.js";
 import { insignia, cargando, errorEstado, titulo } from "../core/components.js";
 import { ESTADOS_ORDEN } from "./orden-detalle.js";
 
 const pagina = iniciarPagina({ zona: "panel", titulo: "Resumen", roles: ["admin"] });
 
-async function cargar() {
+async function cargar({ silencioso = false } = {}) {
   const { main } = pagina;
-  mount(main, cargando());
+  if (!silencioso) mount(main, cargando());
   try {
     const [ord, sol, inst, prod] = await Promise.all([
       ordenesApi.todas(), cotizacionesApi.bandeja(), authApi.institucionales("pendiente"), catalogoApi.listar({ limit: 100 }),
@@ -54,7 +55,7 @@ async function cargar() {
                 h("td", { class: "num" }, insignia(o.estado))))))
           : h("p", { class: "panel-sub" }, "Todavía no hay órdenes.")));
   } catch (error) {
-    mount(main, errorEstado(error, cargar));
+    if (!silencioso) mount(main, errorEstado(error, cargar));
   }
 }
 
@@ -64,4 +65,8 @@ const metrica = (etiqueta, valor, nota) =>
 const atajo = (href, tono, ic, texto, sub) =>
   h("a", { href }, h("span", { class: `alert-icon ${tono}` }, icon(ic)), h("span", {}, h("b", {}, texto), h("small", {}, sub)), icon("arrow"));
 
-if (pagina) cargar();
+if (pagina) {
+  cargar();
+  escucharEvento("cotizacion:nueva", () => cargar({ silencioso: true }));
+  escucharEvento("cotizacion:actualizada", () => cargar({ silencioso: true }));
+}

@@ -3,6 +3,7 @@
 import { h, mount, icon, money, fecha, nombreCompleto, iniciales, ocupado, toast, sinAcentos, params } from "../core/dom.js";
 import { iniciarPagina } from "../core/layout.js";
 import { cotizacionesApi } from "../core/api.js";
+import { escucharEvento } from "../core/socket.js";
 import { usuario, rolDe } from "../core/session.js";
 import { insignia, cargando, errorEstado, titulo } from "../core/components.js";
 
@@ -160,9 +161,9 @@ function tabla(contenedor) {
           : h("tr", {}, h("td", { colspan: "6", class: "table-empty" }, "No hay solicitudes con esos filtros.")))));
 }
 
-async function cargar(abrirId) {
+async function cargar(abrirId, { silencioso = false } = {}) {
   const { main } = pagina;
-  mount(main, cargando());
+  if (!silencioso) mount(main, cargando());
   try {
     solicitudes = (await cotizacionesApi.bandeja()).data;
     const id = abrirId ?? params().get("id");
@@ -181,14 +182,32 @@ async function cargar(abrirId) {
           .map(([e, t]) => h("div", {}, h("b", {}, cuenta(e)), h("span", {}, t)))),
       h("div", { class: "table-toolbar" },
         h("label", { class: "small-search" }, icon("search", 17),
-          h("input", { type: "search", placeholder: "Buscar por código, obra o cliente", "aria-label": "Buscar solicitud", oninput: (e) => { filtro.q = e.target.value; tabla(contenedor); } })),
+          h("input", { type: "search", placeholder: "Buscar por código, obra o cliente", "aria-label": "Buscar solicitud", value: filtro.q, oninput: (e) => { filtro.q = e.target.value; tabla(contenedor); } })),
         h("select", { "aria-label": "Filtrar por estado", onchange: (e) => { filtro.estado = e.target.value; tabla(contenedor); } },
           h("option", { value: "" }, "Todos los estados"), ESTADOS.map((e) => h("option", { selected: e === filtro.estado }, e)))),
       contenedor);
     tabla(contenedor);
   } catch (error) {
-    mount(main, errorEstado(error, () => cargar()));
+    if (!silencioso) mount(main, errorEstado(error, () => cargar()));
   }
 }
 
-if (pagina) cargar();
+if (pagina) {
+  cargar();
+  escucharEvento("cotizacion:nueva", (payload) => {
+    const codigo = payload?.solicitud?.codigo_solicitud;
+    toast(codigo ? `Nueva solicitud de cotización: ${codigo}` : "Nueva solicitud de cotización recibida");
+    if (!params().get("id")) cargar(null, { silencioso: true });
+  });
+  escucharEvento("cotizacion:actualizada", (payload) => {
+    const idActual = params().get("id");
+    const codigo = payload?.solicitud?.codigo_solicitud;
+    if (payload?.tipo === "aprobada" && codigo) toast(`El cliente aprobó la cotización ${codigo}`);
+    else if (payload?.tipo === "rechazada" && codigo) toast(`El cliente rechazó la cotización ${codigo}`);
+    if (!idActual) {
+      cargar(null, { silencioso: true });
+    } else if (String(payload?.solicitud?.id) === String(idActual)) {
+      cargar(idActual, { silencioso: true });
+    }
+  });
+}

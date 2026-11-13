@@ -6,6 +6,10 @@ import {
   Rol,
   PerfilInstitucional,
 } from "../models/index.js";
+import {
+  emitirNuevaSolicitudCotizacion,
+  emitirActualizacionCotizacion,
+} from "../services/socket.service.js";
 
 const generarCodigoSolicitud = () => {
   const hoy = new Date().toISOString().slice(0, 10).replace(/-/g, "");
@@ -64,6 +68,8 @@ export const crearSolicitudCotizacion = async (req, res) => {
         { model: Libros, as: "libro", attributes: ["id", "titulo"] },
       ],
     });
+
+    emitirNuevaSolicitudCotizacion(solicitudCompleta);
 
     return res.status(201).json({
       ok: true,
@@ -169,6 +175,7 @@ export const asignarAsesor = async (req, res) => {
       solicitud.estado = "En Revisión";
     }
     await solicitud.save();
+    emitirActualizacionCotizacion(solicitud, "asignada");
 
     return res.status(200).json({
       ok: true,
@@ -227,6 +234,7 @@ export const emitirPropuestaCotizacion = async (req, res) => {
     solicitud.estado = "Cotizada";
     solicitud.asesor_id = asesorId;
     await solicitud.save();
+    emitirActualizacionCotizacion(solicitud, "propuesta_emitida");
 
     return res.status(201).json({
       ok: true,
@@ -294,6 +302,7 @@ export const responderPropuestaCliente = async (req, res) => {
     }
 
     await solicitud.save();
+    emitirActualizacionCotizacion(solicitud, accion === "aprobar" ? "aprobada" : "rechazada");
 
     return res.status(200).json({
       ok: true,

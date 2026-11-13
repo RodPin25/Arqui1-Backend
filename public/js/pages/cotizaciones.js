@@ -3,6 +3,7 @@
 import { h, mount, icon, money, fecha, nombreCompleto, ocupado, toast, confirmar, sinAcentos } from "../core/dom.js";
 import { iniciarPagina } from "../core/layout.js";
 import { cotizacionesApi } from "../core/api.js";
+import { escucharEvento } from "../core/socket.js";
 import { insignia, cargando, errorEstado, vacio, titulo } from "../core/components.js";
 
 const pagina = iniciarPagina({ titulo: "Mis cotizaciones", roles: ["institucional"] });
@@ -91,9 +92,9 @@ function lista(contenedor) {
           : h("tr", {}, h("td", { colspan: "6", class: "table-empty" }, "No hay solicitudes con esos filtros.")))));
 }
 
-async function cargar(abrirId) {
+async function cargar(abrirId, { silencioso = false } = {}) {
   const { main } = pagina;
-  mount(main, cargando());
+  if (!silencioso) mount(main, cargando());
   try {
     solicitudes = (await cotizacionesApi.mias()).data;
     const id = abrirId ?? new URLSearchParams(location.search).get("id");
@@ -115,14 +116,33 @@ async function cargar(abrirId) {
     mount(main, encabezado,
       h("div", { class: "table-toolbar" },
         h("label", { class: "small-search" }, icon("search", 17),
-          h("input", { type: "search", placeholder: "Buscar por código u obra", "aria-label": "Buscar solicitud", oninput: (e) => { filtro.q = e.target.value; lista(tabla); } })),
+          h("input", { type: "search", placeholder: "Buscar por código u obra", "aria-label": "Buscar solicitud", value: filtro.q, oninput: (e) => { filtro.q = e.target.value; lista(tabla); } })),
         h("select", { "aria-label": "Filtrar por estado", onchange: (e) => { filtro.estado = e.target.value; lista(tabla); } },
-          h("option", { value: "" }, "Todos los estados"), ESTADOS.map((e) => h("option", {}, e)))),
+          h("option", { value: "" }, "Todos los estados"), ESTADOS.map((e) => h("option", { selected: e === filtro.estado }, e)))),
       tabla);
     lista(tabla);
   } catch (error) {
-    mount(main, errorEstado(error, () => cargar()));
+    if (!silencioso) mount(main, errorEstado(error, () => cargar()));
   }
 }
 
-if (pagina) cargar();
+if (pagina) {
+  cargar();
+  escucharEvento("cotizacion:nueva", () => {
+    if (!new URLSearchParams(location.search).get("id")) {
+      cargar(null, { silencioso: true });
+    }
+  });
+  escucharEvento("cotizacion:actualizada", (payload) => {
+    const idActual = new URLSearchParams(location.search).get("id");
+    const codigo = payload?.solicitud?.codigo_solicitud;
+    if (payload?.tipo === "propuesta_emitida") {
+      toast(codigo ? `Tu solicitud ${codigo} ya tiene una propuesta` : "Recibiste una nueva propuesta de cotización");
+    }
+    if (!idActual) {
+      cargar(null, { silencioso: true });
+    } else if (String(payload?.solicitud?.id) === String(idActual)) {
+      cargar(idActual, { silencioso: true });
+    }
+  });
+}
