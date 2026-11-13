@@ -51,8 +51,8 @@
     \IEEEauthorblockN{Marcos Josué García Maldonado}
     \IEEEauthorblockA{\textit{Facultad de Ingeniería} \\
     \textit{Universidad Mesoamericana}\\
-    Carné: 0000-00-0000 \\
-    correo1@universidad.edu}
+    Carné: 202408060 \\
+    marcosjgm@umes.edu.gt}
     \and
     \IEEEauthorblockN{Arturo Alejandro Maldonado Orozco}
     \IEEEauthorblockA{\textit{Facultad de Ingeniería} \\
@@ -107,48 +107,12 @@ Para salvaguardar los principios de alta cohesión y bajo acoplamiento, la plata
 \subsection{Topología Arquitectónica}
 La Fig.~\ref{fig:arquitectura} ilustra el flujo de comunicación y el desacoplamiento entre las capas de la plataforma:
 
-\begin{figure*}[!t]
+\begin{figure}[htbp]
 \centering
-\begin{verbatim}
-+-------------------------------------------------------+
-|                 CLIENTE / INTERFAZ                    |
-|       (Navegador Web / SPA / Clientes HTTP)           |
-+---------------------------+---------------------------+
-                            |
-                 HTTP / REST / WebSockets
-                            |
-                            v
-+-------------------------------------------------------+
-|             CAPA CONTROLADOR (Controller)             |
-|  - auth.controller.js      - catalogo.controller.js   |
-|  - carrito.controller.js   - orden.controller.js      |
-|  - cotizacion.controller.js- reportes.controller.js   |
-|  - auth.middleware.js      - upload.middleware.js     |
-+---------------------------+---------------------------+
-                            |
-                 Invocación a Métodos del
-                 Modelo y Servicios
-                            |
-                            v
-+-------------------------------------------------------+
-|                 CAPA MODELO (Model)                   |
-|  - Carritos.calcularTotales  - Orden.calcularTotales  |
-|  - CheckoutSesion (10 min)   - Idempotencia (Persist) |
-|  - Entidades: Libros, Formatos, Usuarios, Roles, etc. |
-+---------------------------+---------------------------+
-                            |
-                  Consultas SQL Relacionales
-                  Pool Sequelize / Transacciones
-                            |
-                            v
-+-------------------------------------------------------+
-|         BASE DE DATOS RELACIONAL (PostgreSQL)         |
-|  18 Tablas Relacionales, Índices, Constraints UNIQUE  |
-+-------------------------------------------------------+
-\end{verbatim}
-\caption{Diagrama de Arquitectura Multicapa del Sistema Editorial.}
+\includegraphics[width=\columnwidth]{TopologiaArquitectonica.jpeg}
+\caption{Topología y Arquitectura Multicapa del Sistema Editorial.}
 \label{fig:arquitectura}
-\end{figure*}
+\end{figure}
 
 % =========================================================================
 % III. DISEÑO Y MODELO DE BASE DE DATOS
