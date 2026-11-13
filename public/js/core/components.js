@@ -143,12 +143,16 @@ export function estante(productos) {
 export function tarjetaLibro(prod, { alAgregar } = {}) {
   const url = `/libro.html?id=${encodeURIComponent(prod.id)}`;
   const libro = prod.libro || {};
-  const sinStock = !(prod.stock_disponible > 0);
+  const disponibles = Number(prod.stock_disponible || 0);
+  const sinStock = !(disponibles > 0);
   return h("article", { class: "book-card" },
     h("a", { href: url, class: "cover-btn", tabindex: "-1", "aria-hidden": "true" }, portada(libro)),
     h("h3", {}, h("a", { href: url }, libro.titulo)),
     h("p", { class: "book-author" }, autoresDe(libro)),
-    h("p", { class: "book-format" }, prod.formato?.nombre, sinStock ? ", agotado" : prod.stock_disponible < 10 ? ", últimas unidades" : ""),
+    h("p", { class: "book-format" },
+      prod.formato?.nombre,
+      " · ",
+      h("span", { class: "book-stock" }, sinStock ? "Agotado" : `${disponibles} ${disponibles === 1 ? "disponible" : "disponibles"}`)),
     h("div", { class: "book-bottom" },
       h("strong", {}, money(prod.precio_base)),
       alAgregar && h("button", {

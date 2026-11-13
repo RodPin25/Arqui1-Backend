@@ -13,15 +13,23 @@ const filtro = { estado: params().get("estado") || "", q: "" };
 let ordenes = [];
 const tabla = h("div", { class: "table-wrap" });
 
-async function devolverStockOrden(orden) {
+async function ajustarStockOrden(orden, factor) {
   const detalles = orden.detalles || [];
+  const ajustes = [];
   for (const d of detalles) {
     const productoId = d.producto_id || d.producto?.id;
     const cantidad = Number(d.cantidad || 0);
     if (!productoId || cantidad <= 0) continue;
     const prod = (await catalogoApi.producto(productoId)).data;
     const stockActual = Number(prod?.stock_disponible ?? d.producto?.stock_disponible ?? 0);
-    await catalogoApi.actualizarStock(productoId, stockActual + cantidad);
+    const nuevoStock = stockActual + factor * cantidad;
+    if (nuevoStock < 0) {
+      throw new Error(`Stock insuficiente para "${prod?.libro?.titulo || `producto #${productoId}`}" (disponible: ${stockActual}, requerido: ${cantidad})`);
+    }
+    ajustes.push([productoId, nuevoStock]);
+  }
+  for (const [productoId, nuevoStock] of ajustes) {
+    await catalogoApi.actualizarStock(productoId, nuevoStock);
   }
 }
 
@@ -33,18 +41,26 @@ function abrir(o) {
     guardar,
   ]));
   guardar.addEventListener("click", () => ocupado(guardar, async () => {
-    if (selector.value === o.estado) return cerrar();
+    const nuevoEstado = selector.value;
+    if (nuevoEstado === o.estado) return cerrar();
+    const cancelando = nuevoEstado === "Cancelado" && o.estado !== "Cancelado";
+    const reactivando = o.estado === "Cancelado" && nuevoEstado !== "Cancelado";
     try {
-      await ordenesApi.cambiarEstado(o.id, selector.value);
-      if (selector.value === "Cancelado" && o.estado !== "Cancelado") {
+      if (reactivando) {
+        await ajustarStockOrden(o, -1);
+      }
+      await ordenesApi.cambiarEstado(o.id, nuevoEstado);
+      if (cancelando) {
         try {
-          await devolverStockOrden(o);
+          await ajustarStockOrden(o, 1);
           toast("Orden cancelada y stock devuelto al catálogo");
         } catch (errStock) {
           toast(`Orden cancelada, pero no se pudo devolver el stock: ${errStock.message}`, { error: true });
         }
+      } else if (reactivando) {
+        toast(`Orden reactivada a ${nuevoEstado.toLowerCase()} y stock descontado`);
       } else {
-        toast(`Orden actualizada a ${selector.value.toLowerCase()}`);
+        toast(`Orden actualizada a ${nuevoEstado.toLowerCase()}`);
       }
       cerrar();
       await cargar(false);

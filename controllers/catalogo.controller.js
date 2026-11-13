@@ -61,14 +61,41 @@ export const listarProductos = async (req, res) => {
       whereProducto.stock_disponible = { [Op.gt]: 0 };
     }
 
-    // Filtros sobre el libro y búsqueda textual (Título, Sinopsis, ISBN)
+    // Filtros sobre el libro y búsqueda textual (Título, Sinopsis, ISBN, Autor)
     const whereLibro = { activo: true };
     if (q) {
       const qClean = q.trim();
+      const patron = `%${qClean}%`;
+      const librosPorAutor = await Libros.findAll({
+        attributes: ["id"],
+        include: [
+          {
+            model: Autores,
+            as: "autores",
+            attributes: [],
+            through: { attributes: [] },
+            where: {
+              [Op.or]: [
+                { nombres: { [Op.iLike]: patron } },
+                { apellidos: { [Op.iLike]: patron } },
+                sequelize.where(
+                  sequelize.fn("concat", sequelize.col("autores.nombres"), " ", sequelize.col("autores.apellidos")),
+                  { [Op.iLike]: patron }
+                ),
+              ],
+            },
+            required: true,
+          },
+        ],
+        raw: true,
+      });
+      const idsLibrosAutor = librosPorAutor.map((l) => l.id);
+
       whereProducto[Op.or] = [
-        { isbn: { [Op.iLike]: `%${qClean}%` } },
-        { "$libro.titulo$": { [Op.iLike]: `%${qClean}%` } },
-        { "$libro.sinopsis$": { [Op.iLike]: `%${qClean}%` } },
+        { isbn: { [Op.iLike]: patron } },
+        { "$libro.titulo$": { [Op.iLike]: patron } },
+        { "$libro.sinopsis$": { [Op.iLike]: patron } },
+        ...(idsLibrosAutor.length ? [{ libro_id: { [Op.in]: idsLibrosAutor } }] : []),
       ];
     }
 
