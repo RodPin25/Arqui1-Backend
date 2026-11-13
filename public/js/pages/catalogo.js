@@ -1,7 +1,7 @@
 // Catálogo (RF-01.2): búsqueda en tiempo real y filtros combinables.
 // Los filtros viajan como parámetros al Controlador; la Vista no filtra datos.
 
-import { h, mount, icon, money, debounce, params } from "../core/dom.js";
+import { h, mount, icon, money, debounce, params, nombreCompleto } from "../core/dom.js";
 import { iniciarPagina } from "../core/layout.js";
 import { catalogoApi } from "../core/api.js";
 import { escucharEvento } from "../core/socket.js";
@@ -16,6 +16,8 @@ const estado = {
   q: inicial.get("q") || "",
   genero_id: inicial.get("genero_id") || "",
   formato_id: inicial.get("formato_id") || "",
+  autor_id: inicial.get("autor_id") || "",
+  editorial_id: inicial.get("editorial_id") || "",
   min_precio: inicial.get("min_precio") || "",
   max_precio: inicial.get("max_precio") || "",
   en_stock: inicial.get("en_stock") === "true",
@@ -25,6 +27,8 @@ const estado = {
 
 let generos = [];
 let formatos = [];
+let autores = [];
+let editoriales = [];
 let peticion = 0;
 
 const resultados = h("div", { class: "catalog-results" });
@@ -48,7 +52,7 @@ function cambiar(cambios) {
 function limpiar() {
   const global = document.getElementById("busqueda-global");
   if (global) global.value = "";
-  cambiar({ q: "", genero_id: "", formato_id: "", min_precio: "", max_precio: "", en_stock: false });
+  cambiar({ q: "", genero_id: "", formato_id: "", autor_id: "", editorial_id: "", min_precio: "", max_precio: "", en_stock: false });
 }
 
 function pintarFiltros() {
@@ -59,6 +63,14 @@ function pintarFiltros() {
       h("select", { onchange: (e) => cambiar({ genero_id: e.target.value }) },
         h("option", { value: "" }, "Todos"),
         generos.map((g) => h("option", { value: g.id, selected: String(g.id) === estado.genero_id }, g.nombre)))),
+    h("label", { class: "filter-group" }, h("b", {}, "Autor"),
+      h("select", { onchange: (e) => cambiar({ autor_id: e.target.value }) },
+        h("option", { value: "" }, "Todos"),
+        autores.map((a) => h("option", { value: a.id, selected: String(a.id) === estado.autor_id }, nombreCompleto(a))))),
+    h("label", { class: "filter-group" }, h("b", {}, "Editorial"),
+      h("select", { onchange: (e) => cambiar({ editorial_id: e.target.value }) },
+        h("option", { value: "" }, "Todas"),
+        editoriales.map((ed) => h("option", { value: ed.id, selected: String(ed.id) === estado.editorial_id }, ed.nombre)))),
     h("fieldset", { class: "filter-group" }, h("legend", {}, "Formato"),
       [{ id: "", nombre: "Todos" }, ...formatos].map((f) =>
         h("label", { class: "check" },
@@ -85,6 +97,10 @@ function chips() {
   if (estado.q) quitar(`“${estado.q}”`, { q: "" });
   const g = generos.find((x) => String(x.id) === estado.genero_id);
   if (g) quitar(g.nombre, { genero_id: "" });
+  const a = autores.find((x) => String(x.id) === estado.autor_id);
+  if (a) quitar(nombreCompleto(a), { autor_id: "" });
+  const ed = editoriales.find((x) => String(x.id) === estado.editorial_id);
+  if (ed) quitar(ed.nombre, { editorial_id: "" });
   const f = formatos.find((x) => String(x.id) === estado.formato_id);
   if (f) quitar(f.nombre, { formato_id: "" });
   if (estado.min_precio) quitar(`Desde ${money(estado.min_precio)}`, { min_precio: "" });
@@ -145,9 +161,16 @@ async function cargar() {
   pintarFiltros();
   buscar();
   try {
-    const [g, f] = await Promise.all([catalogoApi.generos(), catalogoApi.formatos()]);
+    const [g, f, a, ed] = await Promise.all([
+      catalogoApi.generos(),
+      catalogoApi.formatos(),
+      catalogoApi.autores(),
+      catalogoApi.editoriales(),
+    ]);
     generos = g.data;
     formatos = f.data;
+    autores = a.data;
+    editoriales = ed.data;
     pintarFiltros();
   } catch {
     /* los filtros quedan vacíos; la búsqueda sigue funcionando */
