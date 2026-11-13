@@ -474,18 +474,19 @@ export const crearOrden = async (req, res) => {
   try {
     const carrito = await Carritos.findOne({
       where: { usuario_id: usuarioId },
-      include: [
-        {
-          model: CarritoItem,
-          as: "items",
-          include: [{ model: Catalogo_Productos, as: "producto" }],
-        },
-      ],
       transaction,
       lock: transaction.LOCK.UPDATE,
     });
 
-    if (!carrito || !carrito.items || carrito.items.length === 0) {
+    const itemsCarrito = carrito
+      ? await CarritoItem.findAll({
+          where: { carrito_id: carrito.id },
+          transaction,
+          lock: transaction.LOCK.UPDATE,
+        })
+      : [];
+
+    if (!carrito || itemsCarrito.length === 0) {
       await transaction.rollback();
       return res.status(400).json({
         ok: false,
@@ -496,7 +497,7 @@ export const crearOrden = async (req, res) => {
     const itemsParaCalculo = [];
     const detallesParaCrear = [];
 
-    for (const item of carrito.items) {
+    for (const item of itemsCarrito) {
       const producto = await Catalogo_Productos.findByPk(item.producto_id, {
         transaction,
         lock: transaction.LOCK.UPDATE,
